@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
 import com.sahilmaske.peerlearn.ui.home.HomeScreen
@@ -52,12 +53,21 @@ class MainActivity : ComponentActivity() {
                         RegisterScreen(
                             viewModel = authViewModel,
                             onRegisterSuccess = {
-                                navController.navigate("home") {
+                                navController.navigate("profile") {
                                     popUpTo("register") { inclusive = true }
                                 }
                             },
                             onLoginClick = {
                                 navController.navigate("login")
+                            }
+                        )
+                    }
+                    composable("profile") {
+                        ProfileSetupScreen (
+                            onProfileSaved = {
+                                navController.navigate("home") {
+                                    popUpTo("profile") { inclusive = true }
+                                }
                             }
                         )
                     }
