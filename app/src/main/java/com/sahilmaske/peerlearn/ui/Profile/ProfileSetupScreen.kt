@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
@@ -177,10 +178,12 @@ fun ProfileSetupScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                    val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
                     Button(
                         onClick = { onProfileSaved()
                             val user = User(
+                                uid = currentUid,
                                 name = name,
                                 college = college,
                                 skillsHave = skillsHave,

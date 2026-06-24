@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -23,11 +25,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             PeerLearnTheme {
                 val navController = rememberNavController()
-                val authViewModel = AuthViewModel()
+                val authViewModel: AuthViewModel = viewModel()
+
+                // Decide the start destination ONCE, not on every recomposition
+                val startDestination = remember {
+                    if (authViewModel.isUserLoggedIn) "home" else "login"
+                }
 
                 NavHost(
                     navController = navController,
-                    startDestination = if (authViewModel.isUserLoggedIn) "home" else "register",
+                    startDestination = startDestination,
                     enterTransition = { slideInHorizontally(initialOffsetX = { it }) },
                     exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) },
                     popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) },
@@ -46,9 +53,6 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    composable("home") {
-                        HomeScreen()
-                    }
                     composable("register") {
                         RegisterScreen(
                             viewModel = authViewModel,
@@ -63,13 +67,16 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("profile") {
-                        ProfileSetupScreen (
+                        ProfileSetupScreen(
                             onProfileSaved = {
                                 navController.navigate("home") {
                                     popUpTo("profile") { inclusive = true }
                                 }
                             }
                         )
+                    }
+                    composable("home") {
+                        HomeScreen()
                     }
                 }
             }
