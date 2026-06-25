@@ -17,4 +17,6 @@ data class User(
     val helpCount: Int = 0,
 
 
-)
+) {
+
+}
