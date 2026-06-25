@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 class ProfileViewModel : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val auth by lazy { FirebaseAuth.getInstance() }
+    private val db by lazy { FirebaseFirestore.getInstance() }
 
     private val _uiState = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val uiState: StateFlow<ProfileState> = _uiState
