@@ -10,12 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun ProfileScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = "Profile Screen")
-    }
+
 }
 
 @Preview(showBackground = true)

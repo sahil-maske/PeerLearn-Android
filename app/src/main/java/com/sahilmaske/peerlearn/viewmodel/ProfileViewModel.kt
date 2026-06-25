@@ -12,6 +12,24 @@ class ProfileViewModel : ViewModel() {
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val db by lazy { FirebaseFirestore.getInstance() }
 
+    private val _userProfile = MutableStateFlow<User?>(null)
+
+    val userProfile: StateFlow<User?> = _userProfile
+    fun fetchUserProfile(uid : String) {
+        _uiState.value = ProfileState.Loading
+        db.collection("users")
+            .document(uid)
+            .get()
+            .addOnSuccessListener { document ->
+                val user = document.toObject(User::class.java)
+                _userProfile.value = user
+                _uiState.value = ProfileState.Success
+            }
+            .addOnFailureListener {
+                _uiState.value = ProfileState.Error(it.message ?: "Failed to fetch user profile")
+            }
+    }
+
     private val _uiState = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val uiState: StateFlow<ProfileState> = _uiState
 
