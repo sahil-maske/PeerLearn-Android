@@ -58,7 +58,7 @@ fun HomeScreen(authViewModel: AuthViewModel = viewModel()) {
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     icon = { Icon(Icons.Filled.Home, contentDescription = "Feed") },
-                    label = { Text("Feed") },
+                    label = { Text("Home") },
                     colors = navItemColors
                 )
                 NavigationBarItem(
