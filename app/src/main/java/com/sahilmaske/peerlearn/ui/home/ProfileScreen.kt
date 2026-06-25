@@ -86,24 +86,103 @@ fun ProfileScreen(
                     .background(Color(0xFF8E8E93)),
                 contentAlignment = Alignment.Center
             ){
+                val initials = userProfile?.name
+                    ?.split(" ")
+                    ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
+                    ?.take(2)
+                    ?.joinToString("") ?: "?"
                 Text(
-                    text = userProfile?.name?:"Your Name",
+                    text = initials,
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     textAlign = TextAlign.Center
 
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = userProfile?.college ?: "Your College",
-                    fontSize = 14.sp,
-                    color = Color(0xFF8E8E93)
+            Text(
+                text = userProfile?.name?:"Your Name",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${userProfile?.knownSkills?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "I know this Skill"} • ${userProfile?.location ?: "User Location"}",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.W900,
+                color = Color(0xFF8E8E93)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = userProfile?.learningSkills?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "I want to learn this Skill",
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF8E8E93)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = (userProfile?.postCount ?: 0).toString(),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Post",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = (userProfile?.helpCount ?: 0).toString(),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Helps",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = (userProfile?.connection ?: 0).toString(),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Connections",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                
             }
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

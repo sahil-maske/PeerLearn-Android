@@ -15,8 +15,4 @@ data class User(
     val connection : Int = 0,
     val postCount : Int = 0,
     val helpCount: Int = 0,
-
-
-) {
-
-}
+        )
