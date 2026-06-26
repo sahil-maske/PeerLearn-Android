@@ -1,7 +1,5 @@
 package com.sahilmaske.peerlearn.model
 
-
-
 data class User(
     val uid : String = "",
     val name : String = "",
@@ -14,5 +12,5 @@ data class User(
     val location : String = "",
     val connection : Int = 0,
     val postCount : Int = 0,
-    val helpCount: Int = 0,
-        )
+    val helpCount: Int = 0
+)
