@@ -1,6 +1,7 @@
 package com.sahilmaske.peerlearn.ui.home
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -12,7 +13,10 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.border
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -30,25 +34,37 @@ fun HomeScreen() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
+            Box(
                 modifier = Modifier
-                    .padding(horizontal = 42.dp, vertical = 19.dp)
+                    .fillMaxWidth()
                     .navigationBarsPadding()
-                    .clip(RoundedCornerShape(24.dp))
-                    .height(67.dp)
+                    .padding(horizontal = 35.dp, vertical = 18.dp)
             ) {
-                items.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        icon = { Icon(icons[index], contentDescription = item) },
-                        label = { Text(item) },
-                        selected = selectedItem == index,
-                        onClick = { selectedItem = index }
-                    )
+                NavigationBar(
+                    containerColor = Color.White.copy(alpha = 0.15f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(32.dp))
+                        .height(64.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                ) {
+                    items.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            icon = { Icon(icons[index], contentDescription = item) },
+
+                            selected = selectedItem == index,
+                            onClick = { selectedItem = index }
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
             when (selectedItem) {
                 0 -> FeedScreen()
                 1 -> QAScreen()
