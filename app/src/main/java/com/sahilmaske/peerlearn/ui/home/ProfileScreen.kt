@@ -1,8 +1,5 @@
 package com.sahilmaske.peerlearn.ui.home
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
@@ -39,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -67,19 +66,14 @@ fun ProfileScreen(
     val context = LocalContext.current
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            uploadToCloudinary(context, it, viewModel)
-        }
-    }
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        // Handle captured bitmap
+        uri?.let { uploadToCloudinary(context, it, viewModel) }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            cameraLauncher.launch(null)
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            cameraImageUri?.let { uploadToCloudinary(context, it, viewModel) }
         }
     }
 
@@ -130,11 +124,13 @@ fun ProfileScreen(
         onDismissRequest = { showImagePickerDialog = false },
         onCameraClick = {
             showImagePickerDialog = false
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                cameraLauncher.launch(null)
-            } else {
-                permissionLauncher.launch(Manifest.permission.CAMERA)
-            }
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                java.io.File.createTempFile("avatar_", ".jpg", context.cacheDir)
+            )
+            cameraImageUri = uri
+            cameraLauncher.launch(uri)
         },
         onGalleryClick = {
             showImagePickerDialog = false
@@ -435,13 +431,61 @@ fun ProfileScreen(
 }
 
 // ---- Image Picker Dialog ----
-fun uploadToCloudinary(context: Context, uri: Uri, viewModel: ProfileViewModel) {
-    val cloudName = "db7wneko6"
-    val uploadPreset = "peerlearn_avatar"
+@Composable
+fun ImagePickerDialog(
+    showDialog: Boolean,
+    onDismissRequest: () -> Unit,
+    onCameraClick: () -> Unit,
+    onGalleryClick: () -> Unit
+) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text("Choose Profile Picture", fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("Take Photo") },
+                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                        modifier = Modifier.clickable { onCameraClick() }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Choose from Gallery") },
+                        leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
+                        modifier = Modifier.clickable { onGalleryClick() }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text("Cancel", color = Color(0xFF7C5CFC))
+                }
+            }
+        )
+    }
+}
+
+// Separate function for uploading to Cloudinary
+fun uploadToCloudinary(context: android.content.Context, uri: Uri, viewModel: ProfileViewModel) {
+    val cloudName = "db7wneko6" // Your Cloudinary Cloud Name
+    val uploadPreset = "peerlearn_avatar" // SAHI
 
     val stream = context.contentResolver.openInputStream(uri) ?: return
-    val bytes = stream.readBytes()
+    val originalBitmap = android.graphics.BitmapFactory.decodeStream(stream)
     stream.close()
+
+// Square crop - center se
+    val size = minOf(originalBitmap.width, originalBitmap.height)
+    val x = (originalBitmap.width - size) / 2
+    val y = (originalBitmap.height - size) / 2
+    val cropped = android.graphics.Bitmap.createBitmap(originalBitmap, x, y, size, size)
+
+// Resize to 400x400
+    val resized = android.graphics.Bitmap.createScaledBitmap(cropped, 400, 400, true)
+    val baos = java.io.ByteArrayOutputStream()
+    resized.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, baos)
+    val bytes = baos.toByteArray()
+
 
     Thread {
         try {
@@ -453,9 +497,7 @@ fun uploadToCloudinary(context: Context, uri: Uri, viewModel: ProfileViewModel) 
             connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
 
             val output = connection.outputStream
-            // upload_preset field
             output.write("--$boundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$uploadPreset\r\n".toByteArray())
-            // file field
             output.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
             output.write(bytes)
             output.write("\r\n--$boundary--\r\n".toByteArray())
@@ -463,13 +505,13 @@ fun uploadToCloudinary(context: Context, uri: Uri, viewModel: ProfileViewModel) 
 
             val response = connection.inputStream.bufferedReader().readText()
             val imageUrl = org.json.JSONObject(response).getString("secure_url")
+                .replace("/upload/", "/upload/w_400,h_400,c_thumb,g_face/")
 
-            // Firestore mein save karo
             val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@Thread
             FirebaseFirestore.getInstance()
                 .collection("users")
                 .document(uid)
-                .set(mapOf("avatarUrl" to imageUrl), com.google.firebase.firestore.SetOptions.merge())
+                .set(mapOf("avatarUrl" to imageUrl), SetOptions.merge())
                 .addOnSuccessListener {
                     viewModel.fetchUserProfile(uid)
                 }
@@ -478,33 +520,6 @@ fun uploadToCloudinary(context: Context, uri: Uri, viewModel: ProfileViewModel) 
         }
     }.start()
 }
-// Separate composable for clean code
-@Composable
-fun ImagePickerDialog(
-    showDialog: Boolean,
-    onDismissRequest: () -> Unit,
-    onCameraClick: () -> Unit,
-    onGalleryClick: () -> Unit
-) {
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = { Text("Profile Photo", fontWeight = FontWeight.SemiBold) },
-            text = {
-                Column {
-                    TextButton(onClick = onCameraClick, modifier = Modifier.fillMaxWidth()) {
-                        Text("📷     Camera", fontSize = 16.sp, color = Color.Black)
-                    }
-                    TextButton(onClick = onGalleryClick, modifier = Modifier.fillMaxWidth()) {
-                        Text("🖼️     Gallery", fontSize = 16.sp, color = Color.Black)
-                    }
-                }
-            },
-            confirmButton = {}
-        )
-    }
-}
-
 
 
 @Preview(showBackground = true)
