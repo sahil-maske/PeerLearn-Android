@@ -1,6 +1,7 @@
 package com.sahilmaske.peerlearn.ui.home
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -65,7 +67,9 @@ fun ProfileScreen(
     val context = LocalContext.current
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        // Handle selected image URI
+        uri?.let {
+            uploadToCloudinary(context, it, viewModel)
+        }
     }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         // Handle captured bitmap
@@ -431,6 +435,49 @@ fun ProfileScreen(
 }
 
 // ---- Image Picker Dialog ----
+fun uploadToCloudinary(context: Context, uri: Uri, viewModel: ProfileViewModel) {
+    val cloudName = "db7wneko6"
+    val uploadPreset = "peerlearn_avatar"
+
+    val stream = context.contentResolver.openInputStream(uri) ?: return
+    val bytes = stream.readBytes()
+    stream.close()
+
+    Thread {
+        try {
+            val url = java.net.URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
+            val boundary = "Boundary-${System.currentTimeMillis()}"
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+
+            val output = connection.outputStream
+            // upload_preset field
+            output.write("--$boundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$uploadPreset\r\n".toByteArray())
+            // file field
+            output.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
+            output.write(bytes)
+            output.write("\r\n--$boundary--\r\n".toByteArray())
+            output.flush()
+
+            val response = connection.inputStream.bufferedReader().readText()
+            val imageUrl = org.json.JSONObject(response).getString("secure_url")
+
+            // Firestore mein save karo
+            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@Thread
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .set(mapOf("avatarUrl" to imageUrl), com.google.firebase.firestore.SetOptions.merge())
+                .addOnSuccessListener {
+                    viewModel.fetchUserProfile(uid)
+                }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }.start()
+}
 // Separate composable for clean code
 @Composable
 fun ImagePickerDialog(
