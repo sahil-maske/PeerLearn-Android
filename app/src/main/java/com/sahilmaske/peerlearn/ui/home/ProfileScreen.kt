@@ -1,5 +1,10 @@
 package com.sahilmaske.peerlearn.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,11 +27,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
@@ -54,6 +61,23 @@ fun ProfileScreen(
     var selectedPost by remember { mutableStateOf<Post?>(null) }
     var showImagePickerDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+
+    val context = LocalContext.current
+
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        // Handle selected image URI
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        // Handle captured bitmap
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch(null)
+        }
+    }
 
     // Dummy posts - replace with Firestore data later
     val dummyPosts = listOf(
@@ -100,8 +124,18 @@ fun ProfileScreen(
     ImagePickerDialog(
         showDialog = showImagePickerDialog,
         onDismissRequest = { showImagePickerDialog = false },
-        onCameraClick = { showImagePickerDialog = false },
-        onGalleryClick = { showImagePickerDialog = false }
+        onCameraClick = {
+            showImagePickerDialog = false
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                cameraLauncher.launch(null)
+            } else {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        },
+        onGalleryClick = {
+            showImagePickerDialog = false
+            galleryLauncher.launch("image/*")
+        }
     )
 
     // ---- Post Detail Bottom Sheet ----
@@ -412,10 +446,10 @@ fun ImagePickerDialog(
             text = {
                 Column {
                     TextButton(onClick = onCameraClick, modifier = Modifier.fillMaxWidth()) {
-                        Text("📷  Camera", fontSize = 16.sp, color = Color.Black)
+                        Text("📷     Camera", fontSize = 16.sp, color = Color.Black)
                     }
                     TextButton(onClick = onGalleryClick, modifier = Modifier.fillMaxWidth()) {
-                        Text("🖼️  Gallery", fontSize = 16.sp, color = Color.Black)
+                        Text("🖼️     Gallery", fontSize = 16.sp, color = Color.Black)
                     }
                 }
             },
@@ -423,6 +457,8 @@ fun ImagePickerDialog(
         )
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable
