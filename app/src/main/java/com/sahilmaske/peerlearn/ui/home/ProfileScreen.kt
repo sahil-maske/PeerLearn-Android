@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -39,6 +40,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.sahilmaske.peerlearn.model.Post
+import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
@@ -93,7 +95,8 @@ fun ProfileScreen(
             title = {
                 Text(
                     text = if (selectedSkillType == "learning") "Learning Skills" else "Known Skills",
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextPrimary
                 )
             },
             text = {
@@ -101,17 +104,17 @@ fun ProfileScreen(
                     val skills = if (selectedSkillType == "learning")
                         userProfile?.learningSkills else userProfile?.knownSkills
                     if (skills.isNullOrEmpty()) {
-                        Text("No skills added yet", color = Color(0xFF8E8E93))
+                        Text("No skills added yet", color = AppColors.TextSecondary)
                     } else {
                         skills.forEach {
-                            Text("• $it", fontSize = 14.sp, modifier = Modifier.padding(vertical = 4.dp))
+                            Text("• $it", fontSize = 14.sp, modifier = Modifier.padding(vertical = 4.dp), color = AppColors.TextPrimary)
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { selectedSkillType = null }) {
-                    Text("Close", color = Color(0xFF7C5CFC))
+                    Text("Close", color = AppColors.Primary)
                 }
             }
         )
@@ -143,36 +146,37 @@ fun ProfileScreen(
     if (selectedPost != null) {
         ModalBottomSheet(
             onDismissRequest = { selectedPost = null },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = AppColors.Surface
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
 
                 // Post info
-                Text(selectedPost!!.heading, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(selectedPost!!.heading, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = AppColors.TextPrimary)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     selectedPost!!.description.ifEmpty { "No description added." },
                     fontSize = 14.sp,
-                    color = Color(0xFF8E8E93)
+                    color = AppColors.TextSecondary
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("❤️ ${selectedPost!!.likeCount}")
-                    Text("💬 ${selectedPost!!.commentCount}")
+                    Text("❤️ ${selectedPost!!.likeCount}", color = AppColors.TextPrimary)
+                    Text("💬 ${selectedPost!!.commentCount}", color = AppColors.TextPrimary)
                 }
 
                 Spacer(Modifier.height(24.dp))
-                HorizontalDivider()
+                HorizontalDivider(color = AppColors.Divider)
                 Spacer(Modifier.height(8.dp))
 
                 // Post actions
                 listOf("Save post", "Hide post", "Report post").forEach { action ->
                     TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-                        Text(action, color = Color.Black, fontSize = 16.sp)
+                        Text(action, color = AppColors.TextPrimary, fontSize = 16.sp)
                     }
                 }
                 TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-                    Text("Delete post", color = Color.Red, fontSize = 16.sp)
+                    Text("Delete post", color = AppColors.Error, fontSize = 16.sp)
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -182,7 +186,9 @@ fun ProfileScreen(
 
     // ---- Main Screen ----
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize()
+            .background(AppColors.Background)
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -190,7 +196,7 @@ fun ProfileScreen(
         if (uiState is ProfileState.Loading) {
             item {
                 Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = AppColors.Primary)
                 }
             }
             return@LazyColumn
@@ -199,16 +205,27 @@ fun ProfileScreen(
         // ---- Top Bar ----
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .background(AppColors.Surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = {}) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "Back")
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBackIos,
+                        contentDescription = "Back",
+                        tint = AppColors.Icon
+                    )
                 }
-                Text("Profile", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text("Profile", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                 IconButton(onClick = {}) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = "Settings",
+                        tint = AppColors.Icon
+                    )
                 }
             }
         }
@@ -221,7 +238,7 @@ fun ProfileScreen(
                 // Avatar - shows initials if no image, else Coil loads image
                 if (userProfile?.avatarUrl.isNullOrEmpty()) {
                     Box(
-                        modifier = Modifier.size(110.dp).clip(CircleShape).background(Color(0xFF8E8E93)),
+                        modifier = Modifier.size(110.dp).clip(CircleShape).background(AppColors.SecondaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         val initials = userProfile?.name
@@ -229,7 +246,7 @@ fun ProfileScreen(
                             ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
                             ?.take(2)
                             ?.joinToString("") ?: "?"
-                        Text(initials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(initials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                     }
                 } else {
                     AsyncImage(
@@ -246,11 +263,11 @@ fun ProfileScreen(
                         .size(32.dp)
                         .offset(x = 4.dp, y = 4.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF7C5CFC))
+                        .background(AppColors.Primary)
                         .clickable { showImagePickerDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = AppColors.TextWhite, modifier = Modifier.size(18.dp))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -258,14 +275,19 @@ fun ProfileScreen(
 
         // ---- Name + Skills Text ----
         item {
-            Text(userProfile?.name ?: "Your Name", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                userProfile?.name ?: "Your Name",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AppColors.TextPrimary
+            )
             Spacer(Modifier.height(2.dp))
             Text(
                 "${userProfile?.knownSkills?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "I know this Skill"} • ${userProfile?.location ?: "User Location"}",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 14.sp,
-                color = Color(0xFF8E8E93)
+                color = AppColors.TextSecondary
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -273,7 +295,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 14.sp,
-                color = Color(0xFF8E8E93)
+                color = AppColors.TextSecondary
             )
             Spacer(Modifier.height(16.dp))
         }
@@ -282,7 +304,7 @@ fun ProfileScreen(
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
                 elevation = CardDefaults.cardElevation(2.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             ) {
@@ -291,18 +313,18 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text((userProfile?.postCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Post", fontSize = 12.sp, color = Color(0xFF8A8A93))
+                        Text((userProfile?.postCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        Text("Post", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
-                    Text("|", fontSize = 28.sp)
+                    Text("|", fontSize = 28.sp, color = AppColors.Divider)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text((userProfile?.helpCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Helps", fontSize = 12.sp, color = Color(0xFF8A8A93))
+                        Text((userProfile?.helpCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        Text("Helps", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
-                    Text("|", fontSize = 28.sp)
+                    Text("|", fontSize = 28.sp, color = AppColors.Divider)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text((userProfile?.connection ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Connections", fontSize = 12.sp, color = Color(0xFF8A8A93))
+                        Text((userProfile?.connection ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        Text("Connections", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
                 }
             }
@@ -315,12 +337,12 @@ fun ProfileScreen(
                 onClick = {},
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(48.dp),
                 shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, Color(0xFF7C5CFC)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF7C5CFC))
+                border = BorderStroke(1.dp, AppColors.Primary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Primary)
             ) {
-                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp), tint = AppColors.Primary)
                 Spacer(Modifier.width(8.dp))
-                Text("Edit Profile", fontWeight = FontWeight.Medium)
+                Text("Edit Profile", fontWeight = FontWeight.Medium, color = AppColors.Primary)
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -336,17 +358,18 @@ fun ProfileScreen(
                 Card(
                     onClick = { selectedSkillType = "learning" },
                     modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0ECFF)),
-                    shape = RoundedCornerShape(14.dp)
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, AppColors.Divider)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Learning", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text("Learning", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = AppColors.TextPrimary)
                         Spacer(Modifier.height(4.dp))
                         val skills = userProfile?.learningSkills
                         if (skills.isNullOrEmpty()) {
-                            Text("No skills added", fontSize = 12.sp, color = Color(0xFF8E8E93))
+                            Text("No skills added", fontSize = 12.sp, color = AppColors.TextSecondary)
                         } else {
-                            skills.forEach { Text("• $it", fontSize = 12.sp, color = Color(0xFF8E8E93)) }
+                            skills.forEach { Text("• $it", fontSize = 12.sp, color = AppColors.TextSecondary) }
                         }
                     }
                 }
@@ -355,17 +378,18 @@ fun ProfileScreen(
                 Card(
                     onClick = { selectedSkillType = "known" },
                     modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF7EE)),
-                    shape = RoundedCornerShape(14.dp)
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, AppColors.Divider)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Known", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text("Known", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = AppColors.TextPrimary)
                         Spacer(Modifier.height(4.dp))
                         val skills = userProfile?.knownSkills
                         if (skills.isNullOrEmpty()) {
-                            Text("No skills added", fontSize = 12.sp, color = Color(0xFF8E8E93))
+                            Text("No skills added", fontSize = 12.sp, color = AppColors.TextSecondary)
                         } else {
-                            skills.forEach { Text("• $it", fontSize = 12.sp, color = Color(0xFF8E8E93)) }
+                            skills.forEach { Text("• $it", fontSize = 12.sp, color = AppColors.TextSecondary) }
                         }
                     }
                 }
@@ -380,8 +404,8 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Posts", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                Text("See all", color = Color(0xFF7C5CFC), fontSize = 14.sp)
+                Text("Posts", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = AppColors.TextPrimary)
+                Text("See all", color = AppColors.Primary, fontSize = 14.sp)
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -402,20 +426,27 @@ fun ProfileScreen(
                                 detectTapGestures(onLongPress = { selectedPost = post })
                             },
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = when (post.imageUrl) {
-                                "purple" -> Color(0xFF7C5CFC)
-                                "red" -> Color(0xFFFC5C7D)
-                                "green" -> Color(0xFF11998E)
-                                "orange" -> Color(0xFFF7971E)
-                                else -> Color(0xFF7C5CFC)
-                            }
-                        )
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
-                        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        when (post.imageUrl) {
+                                            "purple" -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
+                                            "red" -> listOf(AppColors.Tertiary, AppColors.TertiaryContainer)
+                                            "green" -> listOf(AppColors.Secondary, AppColors.SecondaryContainer)
+                                            "orange" -> listOf(AppColors.TertiaryContainer, AppColors.SecondaryContainer)
+                                            else -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
+                                        }
+                                    )
+                                )
+                                .padding(12.dp)
+                        ) {
                             Text(
                                 text = post.heading,
-                                color = Color.White,
+                                color = AppColors.TextWhite,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.align(Alignment.BottomStart)
@@ -441,24 +472,27 @@ fun ImagePickerDialog(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = onDismissRequest,
-            title = { Text("Choose Profile Picture", fontWeight = FontWeight.SemiBold) },
+            containerColor = AppColors.Surface,
+            title = { Text("Choose Profile Picture", fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary) },
             text = {
                 Column {
                     ListItem(
-                        headlineContent = { Text("Take Photo") },
-                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
-                        modifier = Modifier.clickable { onCameraClick() }
+                        headlineContent = { Text("Take Photo", color = AppColors.TextPrimary) },
+                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null, tint = AppColors.Icon) },
+                        modifier = Modifier.clickable { onCameraClick() },
+                        colors = ListItemDefaults.colors(containerColor = AppColors.Surface)
                     )
                     ListItem(
-                        headlineContent = { Text("Choose from Gallery") },
-                        leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
-                        modifier = Modifier.clickable { onGalleryClick() }
+                        headlineContent = { Text("Choose from Gallery", color = AppColors.TextPrimary) },
+                        leadingContent = { Icon(Icons.Default.Image, contentDescription = null, tint = AppColors.Icon) },
+                        modifier = Modifier.clickable { onGalleryClick() },
+                        colors = ListItemDefaults.colors(containerColor = AppColors.Surface)
                     )
                 }
             },
             confirmButton = {
                 TextButton(onClick = onDismissRequest) {
-                    Text("Cancel", color = Color(0xFF7C5CFC))
+                    Text("Cancel", color = AppColors.Primary)
                 }
             }
         )

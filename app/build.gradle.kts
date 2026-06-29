@@ -37,9 +37,14 @@ android {
 
 dependencies {
 
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
+
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)

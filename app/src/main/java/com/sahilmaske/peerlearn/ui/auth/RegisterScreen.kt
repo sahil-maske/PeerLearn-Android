@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.AuthState
 import com.sahilmaske.peerlearn.viewmodel.AuthViewModel
 
@@ -45,7 +46,7 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppColors.Background)
     ) {
         Column(
             modifier = Modifier
@@ -58,7 +59,7 @@ fun RegisterScreen(
                 fontSize = 33.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.5).sp,
-                color = Color(0xFF000000)
+                color = AppColors.TextPrimary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -66,7 +67,7 @@ fun RegisterScreen(
             Text(
                 text = "Join PeerLearn today",
                 fontSize = 16.sp,
-                color = Color(0xFF8E8E93)
+                color = AppColors.TextSecondary
             )
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -74,14 +75,18 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
+                label = { Text("Email", color = AppColors.TextSecondary) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF000000),
-                    unfocusedBorderColor = Color(0xFFD1D1D6)
+                    focusedBorderColor = AppColors.Primary,
+                    unfocusedBorderColor = AppColors.Divider,
+                    focusedLabelColor = AppColors.Primary,
+                    unfocusedLabelColor = AppColors.TextSecondary,
+                    cursorColor = AppColors.Primary
                 )
             )
 
@@ -90,15 +95,19 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text("Password", color = AppColors.TextSecondary) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF000000),
-                    unfocusedBorderColor = Color(0xFFD1D1D6)
+                    focusedBorderColor = AppColors.Primary,
+                    unfocusedBorderColor = AppColors.Divider,
+                    focusedLabelColor = AppColors.Primary,
+                    unfocusedLabelColor = AppColors.TextSecondary,
+                    cursorColor = AppColors.Primary
                 )
             )
 
@@ -107,15 +116,19 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Confirm Password") },
+                label = { Text("Confirm Password", color = AppColors.TextSecondary) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF000000),
-                    unfocusedBorderColor = Color(0xFFD1D1D6)
+                    focusedBorderColor = AppColors.Primary,
+                    unfocusedBorderColor = AppColors.Divider,
+                    focusedLabelColor = AppColors.Primary,
+                    unfocusedLabelColor = AppColors.TextSecondary,
+                    cursorColor = AppColors.Primary
                 )
             )
 
@@ -123,7 +136,7 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = passwordError,
-                    color = Color(0xFFFF3B30),
+                    color = AppColors.Error,
                     fontSize = 13.sp
                 )
             }
@@ -147,12 +160,12 @@ fun RegisterScreen(
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF000000)
+                    containerColor = AppColors.Primary
                 )
             ) {
                 if (uiState is AuthState.Loading) {
                     CircularProgressIndicator(
-                        color = Color.White,
+                        color = AppColors.TextWhite,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(20.dp)
                     )
@@ -161,7 +174,7 @@ fun RegisterScreen(
                         text = "Create Account",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = AppColors.TextWhite
                     )
                 }
             }
@@ -174,12 +187,12 @@ fun RegisterScreen(
             ) {
                 Text(
                     text = "Already have an account? ",
-                    color = Color(0xFF8E8E93),
+                    color = AppColors.TextSecondary,
                     fontSize = 15.sp
                 )
                 Text(
                     text = "Sign In",
-                    color = Color(0xFF000000),
+                    color = AppColors.Primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp
                 )

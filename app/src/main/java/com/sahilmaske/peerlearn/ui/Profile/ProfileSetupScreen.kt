@@ -1,5 +1,6 @@
 package com.sahilmaske.peerlearn.ui.Profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
 @Composable
@@ -43,7 +45,7 @@ fun ProfileSetupScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(AppColors.Background)
     ) {
         Column(
             modifier = Modifier
@@ -58,26 +60,30 @@ fun ProfileSetupScreen(
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
-                    color = Color(0xFF000000)
+                    color = AppColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Step 1 of 2",
                     fontSize = 16.sp,
-                    color = Color(0xFF8E8E93)
+                    color = AppColors.TextSecondary
                 )
                 Spacer(modifier = Modifier.height(40.dp))
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Your Name") },
+                    label = { Text("Your Name", color = AppColors.TextSecondary) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF000000),
-                        unfocusedBorderColor = Color(0xFFD1D1D6)
+                        focusedBorderColor = AppColors.Primary,
+                        unfocusedBorderColor = AppColors.Divider,
+                        focusedLabelColor = AppColors.Primary,
+                        unfocusedLabelColor = AppColors.TextSecondary,
+                        cursorColor = AppColors.Primary
                     )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -85,13 +91,17 @@ fun ProfileSetupScreen(
                 OutlinedTextField(
                     value = college,
                     onValueChange = { college = it },
-                    label = { Text("College") },
+                    label = { Text("College", color = AppColors.TextSecondary) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF000000),
-                        unfocusedBorderColor = Color(0xFFD1D1D6)
+                        focusedBorderColor = AppColors.Primary,
+                        unfocusedBorderColor = AppColors.Divider,
+                        focusedLabelColor = AppColors.Primary,
+                        unfocusedLabelColor = AppColors.TextSecondary,
+                        cursorColor = AppColors.Primary
                     )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -99,13 +109,17 @@ fun ProfileSetupScreen(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Location (e.g. Nagpur, Maharashtra)") },
+                    label = { Text("Location (e.g. Nagpur, Maharashtra)", color = AppColors.TextSecondary) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF000000),
-                        unfocusedBorderColor = Color(0xFFD1D1D6)
+                        focusedBorderColor = AppColors.Primary,
+                        unfocusedBorderColor = AppColors.Divider,
+                        focusedLabelColor = AppColors.Primary,
+                        unfocusedLabelColor = AppColors.TextSecondary,
+                        cursorColor = AppColors.Primary
                     )
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -118,14 +132,14 @@ fun ProfileSetupScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF000000)
+                        containerColor = AppColors.Primary
                     )
                 ) {
                     Text(
                         text = "Next →",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = AppColors.TextWhite
                     )
                 }
 
@@ -136,13 +150,13 @@ fun ProfileSetupScreen(
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
-                    color = Color(0xFF000000)
+                    color = AppColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Step 2 of 2",
                     fontSize = 16.sp,
-                    color = Color(0xFF8E8E93)
+                    color = AppColors.TextSecondary
                 )
                 Spacer(modifier = Modifier.height(40.dp))
 
@@ -151,7 +165,7 @@ fun ProfileSetupScreen(
                     text = "Skills I Know",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF000000)
+                    color = AppColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -163,21 +177,22 @@ fun ProfileSetupScreen(
                                 onClick = {
                                     knownSkills = knownSkills - skill
                                 },
-                                label = { Text(skill, fontSize = 13.sp) },
+                                label = { Text(skill, fontSize = 13.sp, color = AppColors.SkillKnownText) },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
                                         contentDescription = "Remove",
-                                        modifier = Modifier.size(14.dp)
+                                        modifier = Modifier.size(14.dp),
+                                        tint = AppColors.SkillKnownText
                                     )
                                 },
                                 colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = Color(0xFFE1F5EE),
-                                    labelColor = Color(0xFF085041)
+                                    containerColor = AppColors.SkillKnownBg,
+                                    labelColor = AppColors.SkillKnownText
                                 ),
                                 border = AssistChipDefaults.assistChipBorder(
                                     enabled = true,
-                                    borderColor = Color(0xFF1D9E75)
+                                    borderColor = AppColors.SkillKnownBorder
                                 )
                             )
                         }
@@ -194,13 +209,15 @@ fun ProfileSetupScreen(
                     OutlinedTextField(
                         value = knownInput,
                         onValueChange = { knownInput = it },
-                        label = { Text("e.g. Kotlin, Firebase") },
+                        label = { Text("e.g. Kotlin, Firebase", color = AppColors.TextSecondary) },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
+                        textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF1D9E75),
-                            unfocusedBorderColor = Color(0xFFD1D1D6)
+                            focusedBorderColor = AppColors.SkillKnownBorder,
+                            unfocusedBorderColor = AppColors.Divider,
+                            cursorColor = AppColors.SkillKnownBorder
                         )
                     )
                     Button(
@@ -212,10 +229,10 @@ fun ProfileSetupScreen(
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1D9E75)
+                            containerColor = AppColors.SkillKnownBorder
                         )
                     ) {
-                        Text("Add")
+                        Text("Add", color = AppColors.TextWhite)
                     }
                 }
 
@@ -226,7 +243,7 @@ fun ProfileSetupScreen(
                     text = "Skills I Want to Learn",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF000000)
+                    color = AppColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -238,21 +255,22 @@ fun ProfileSetupScreen(
                                 onClick = {
                                     learningSkills = learningSkills - skill
                                 },
-                                label = { Text(skill, fontSize = 13.sp) },
+                                label = { Text(skill, fontSize = 13.sp, color = AppColors.SkillLearnText) },
                                 trailingIcon = {
                                     Icon(
                                         Icons.Default.Close,
                                         contentDescription = "Remove",
-                                        modifier = Modifier.size(14.dp)
+                                        modifier = Modifier.size(14.dp),
+                                        tint = AppColors.SkillLearnText
                                     )
                                 },
                                 colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = Color(0xFFFAEEDA),
-                                    labelColor = Color(0xFF633806)
+                                    containerColor = AppColors.SkillLearnBg,
+                                    labelColor = AppColors.SkillLearnText
                                 ),
                                 border = AssistChipDefaults.assistChipBorder(
                                     enabled = true,
-                                    borderColor = Color(0xFFEF9F27)
+                                    borderColor = AppColors.SkillLearnBorder
                                 )
                             )
                         }
@@ -269,13 +287,15 @@ fun ProfileSetupScreen(
                     OutlinedTextField(
                         value = learningInput,
                         onValueChange = { learningInput = it },
-                        label = { Text("e.g. Jetpack Compose") },
+                        label = { Text("e.g. Jetpack Compose", color = AppColors.TextSecondary) },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
+                        textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFEF9F27),
-                            unfocusedBorderColor = Color(0xFFD1D1D6)
+                            focusedBorderColor = AppColors.SkillLearnBorder,
+                            unfocusedBorderColor = AppColors.Divider,
+                            cursorColor = AppColors.SkillLearnBorder
                         )
                     )
                     Button(
@@ -287,10 +307,10 @@ fun ProfileSetupScreen(
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFEF9F27)
+                            containerColor = AppColors.SkillLearnBorder
                         )
                     ) {
-                        Text("Add", color = Color.White)
+                        Text("Add", color = AppColors.TextWhite)
                     }
                 }
 
@@ -299,12 +319,13 @@ fun ProfileSetupScreen(
                 OutlinedTextField(
                     value = bio,
                     onValueChange = { bio = it },
-                    label = { Text("Bio (optional)") },
+                    label = { Text("Bio (optional)", color = AppColors.TextSecondary) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF000000),
-                        unfocusedBorderColor = Color(0xFFD1D1D6)
+                        focusedBorderColor = AppColors.Primary,
+                        unfocusedBorderColor = AppColors.Divider
                     )
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -320,10 +341,11 @@ fun ProfileSetupScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF000000)
-                        )
+                            contentColor = AppColors.TextPrimary
+                        ),
+                        border = BorderStroke(1.dp, AppColors.Divider)
                     ) {
-                        Text("← Back", fontWeight = FontWeight.SemiBold)
+                        Text("← Back", fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
                     }
 
                     Button(
@@ -351,13 +373,13 @@ fun ProfileSetupScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF000000)
+                            containerColor = AppColors.Primary
                         )
                     ) {
                         Text(
                             text = "Save →",
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = AppColors.TextWhite
                         )
                     }
                 }
