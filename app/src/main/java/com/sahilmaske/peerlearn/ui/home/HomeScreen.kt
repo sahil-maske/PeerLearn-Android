@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -27,6 +28,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 
 @Composable
@@ -155,8 +157,28 @@ fun AnimatedBottomNav(
     }
 }
 
+@Composable
+fun HomeTopBar(userName: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text("Hay $userName", fontSize = 13.sp, color = AppColors.TextSecondary)
+            Text("Discover peers", fontSize = 18.sp, color = AppColors.TextPrimary)
+        }
+        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    HomeScreen()
+    Column {
+        HomeTopBar(userName = "Sahil")
+        HomeScreen()
+    }
 }
