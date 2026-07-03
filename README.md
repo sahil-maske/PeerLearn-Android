@@ -118,5 +118,5 @@ git clone https://github.com/sahil-maske/PeerLearn-Android.git
 
 ## 👤 Author
 
-Built by **Sahil Maske** — 2nd Year CSE Diploma Student
+Built by **Sahil Maske** — 3nd Year CSE Diploma Student
 [GitHub](https://github.com/sahil-maske)
