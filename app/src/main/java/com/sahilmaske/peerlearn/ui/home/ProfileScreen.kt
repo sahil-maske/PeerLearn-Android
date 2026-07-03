@@ -188,7 +188,7 @@ fun ProfileScreen(
     LazyColumn(
         modifier = Modifier.fillMaxSize()
             .background(AppColors.Background)
-            .padding(12.dp),
+            .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -204,10 +204,11 @@ fun ProfileScreen(
 
         // ---- Top Bar ----
         item {
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 19.dp)
                     .background(AppColors.Surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween

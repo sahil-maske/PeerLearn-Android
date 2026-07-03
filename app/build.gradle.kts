@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.activity:activity-compose:1.9.0")
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
