@@ -29,10 +29,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
+import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    profileViewModel: ProfileViewModel = viewModel(),
+    feedViewModel: FeedViewModel = viewModel(
+        factory = FeedViewModel.provideFactory(profileViewModel)
+    )
+) {
     var selectedItem by remember { mutableIntStateOf(0) }
     val items = listOf("Feed", "QA", "Chat", "Profile")
     val icons = listOf(
@@ -41,6 +50,15 @@ fun HomeScreen() {
         Icons.AutoMirrored.Filled.Chat,
         Icons.Default.Person
     )
+
+    val userProfile by profileViewModel.userProfile.collectAsState()
+
+    LaunchedEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            profileViewModel.fetchUserProfile(uid)
+        }
+    }
 
     // Root Box — isme content aur nav dono OVERLAP kar sakte hain (Column mein nahi hota)
     Box(
@@ -59,10 +77,10 @@ fun HomeScreen() {
             modifier = Modifier.fillMaxSize()
         ) { screen ->
             when (screen) {
-                0 -> FeedScreen()
+                0 -> FeedScreen(viewModel = feedViewModel)
                 1 -> QAScreen()
                 2 -> ChatScreen()
-                3 -> ProfileScreen()
+                3 -> ProfileScreen(viewModel = profileViewModel)
             }
         }
 
@@ -157,28 +175,10 @@ fun AnimatedBottomNav(
     }
 }
 
-@Composable
-fun HomeTopBar(userName: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text("Hay $userName", fontSize = 13.sp, color = AppColors.TextSecondary)
-            Text("Discover peers", fontSize = 18.sp, color = AppColors.TextPrimary)
-        }
-        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    Column {
-        HomeTopBar(userName = "Sahil")
+
         HomeScreen()
-    }
 }

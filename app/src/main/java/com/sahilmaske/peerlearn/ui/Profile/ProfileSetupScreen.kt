@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -26,7 +27,7 @@ import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 @Composable
 fun ProfileSetupScreen(
     onProfileSaved: () -> Unit = {},
-    viewModel: ProfileViewModel = ProfileViewModel(),
+    viewModel: ProfileViewModel = viewModel(),
 ) {
     var currentStep by remember { mutableStateOf(1) }
 

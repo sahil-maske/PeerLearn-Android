@@ -18,13 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.AuthState
 import com.sahilmaske.peerlearn.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel = AuthViewModel(),
+    viewModel: AuthViewModel = viewModel(),
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit = {}
 ) {

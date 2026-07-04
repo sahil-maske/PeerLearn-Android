@@ -17,13 +17,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.AuthState
 import com.sahilmaske.peerlearn.viewmodel.AuthViewModel
 
 @Composable
 fun RegisterScreen(
-    viewModel: AuthViewModel = AuthViewModel(),
+    viewModel: AuthViewModel = viewModel(),
     onRegisterSuccess: () -> Unit = {},
     onLoginClick: () -> Unit = {}
 ) {
