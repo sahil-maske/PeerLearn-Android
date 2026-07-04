@@ -86,12 +86,12 @@ fun HomeScreen(
 
             )
         }
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-
-        ) {
+//        Card(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(4.dp),
+//
+//        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -116,7 +116,7 @@ fun HomeScreen(
                         modifier = Modifier.clickable { /* navigate */ }
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -124,7 +124,7 @@ fun HomeScreen(
                         PeerSuggestionCard(peer = peer)
                     }
                 }
-            }
+            //}
 
 
         }
