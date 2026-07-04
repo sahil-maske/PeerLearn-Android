@@ -14,7 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
-import com.sahilmaske.peerlearn.ui.home.HomeScreen
+import com.sahilmaske.peerlearn.ui.home.NaviScreen
 import com.sahilmaske.peerlearn.ui.theme.PeerLearnTheme
 import com.sahilmaske.peerlearn.viewmodel.AuthViewModel
 
@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("home") {
-                        HomeScreen()
+                        NaviScreen()
                     }
                 }
             }
