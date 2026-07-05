@@ -62,7 +62,7 @@ fun HomeScreen(
             Column (
                 modifier = Modifier
                     .weight(1f)
-                    .padding(top = 20.dp, start = 12.dp),
+                    .padding(top = 20.dp, start = 2.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Top
             ){
@@ -85,17 +85,11 @@ fun HomeScreen(
                     }
 
             )
-        }
-//        Card(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(4.dp),
-//
-//        ) {
+             }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -124,9 +118,6 @@ fun HomeScreen(
                         PeerSuggestionCard(peer = peer)
                     }
                 }
-            //}
-
-
         }
     }
 }
