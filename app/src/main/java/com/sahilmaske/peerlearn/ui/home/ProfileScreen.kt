@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -89,7 +90,6 @@ fun ProfileScreen(
     )
 
     // ---- Skills Dialog ----
-    // Shows when user taps Learning or Known card
     if (selectedSkillType != null) {
         AlertDialog(
             onDismissRequest = { selectedSkillType = null },
@@ -122,7 +122,6 @@ fun ProfileScreen(
     }
 
     // ---- Image Picker Dialog ----
-    // Shows Camera / Gallery options when user taps camera icon
     ImagePickerDialog(
         showDialog = showImagePickerDialog,
         onDismissRequest = { showImagePickerDialog = false },
@@ -143,7 +142,6 @@ fun ProfileScreen(
     )
 
     // ---- Post Detail Bottom Sheet ----
-    // Shows when user long presses a post card
     if (selectedPost != null) {
         ModalBottomSheet(
             onDismissRequest = { selectedPost = null },
@@ -152,7 +150,6 @@ fun ProfileScreen(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
 
-                // Post info
                 Text(selectedPost!!.heading, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = AppColors.TextPrimary)
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -170,7 +167,6 @@ fun ProfileScreen(
                 HorizontalDivider(color = AppColors.Divider)
                 Spacer(Modifier.height(8.dp))
 
-                // Post actions
                 listOf("Save post", "Hide post", "Report post").forEach { action ->
                     TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
                         Text(action, color = AppColors.TextPrimary, fontSize = 16.sp)
@@ -209,7 +205,7 @@ fun ProfileScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 19.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)   // ← FIX 1: 19dp se 12dp
                     .background(AppColors.Surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -237,10 +233,13 @@ fun ProfileScreen(
             Spacer(Modifier.height(10.dp))
             Box(contentAlignment = Alignment.BottomEnd) {
 
-                // Avatar - shows initials if no image, else Coil loads image
                 if (userProfile?.avatarUrl.isNullOrEmpty()) {
                     Box(
-                        modifier = Modifier.size(110.dp).clip(CircleShape).background(AppColors.SecondaryContainer),
+                        modifier = Modifier
+                            .size(110.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.SecondaryContainer)
+                            .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),  // ← FIX 2
                         contentAlignment = Alignment.Center
                     ) {
                         val initials = userProfile?.name
@@ -254,12 +253,14 @@ fun ProfileScreen(
                     AsyncImage(
                         model = userProfile?.avatarUrl,
                         contentDescription = "Avatar",
-                        modifier = Modifier.size(110.dp).clip(CircleShape),
+                        modifier = Modifier
+                            .size(110.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),  // ← FIX 2
                         contentScale = ContentScale.Crop
                     )
                 }
 
-                // Camera icon - bottom right corner like WhatsApp
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -275,7 +276,7 @@ fun ProfileScreen(
             Spacer(Modifier.height(8.dp))
         }
 
-        // ---- Name + Skills Text ----
+        // ---- Name + Location Text ----
         item {
             Text(
                 userProfile?.name ?: "Your Name",
@@ -285,22 +286,12 @@ fun ProfileScreen(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = " ${userProfile?.location ?: " - User Location"}",
+                text = userProfile?.location?.takeIf { it.isNotBlank() } ?: "Location not added",  // ← FIX 4
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 14.sp,
                 color = AppColors.TextSecondary
             )
-            Spacer(Modifier.height(4.dp))
-          /*  Text(
-                userProfile?.learningSkills?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "I want to learn this Skill",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 14.sp,
-                color = AppColors.TextSecondary
-            )
-
-           */
             Spacer(Modifier.height(8.dp))
         }
 
@@ -320,12 +311,12 @@ fun ProfileScreen(
                         Text((userProfile?.postCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                         Text("Post", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
-                    Text("|", fontSize = 28.sp, color = AppColors.Divider)
+                    VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)  // ← FIX 3
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text((userProfile?.helpCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                         Text("Helps", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
-                    Text("|", fontSize = 28.sp, color = AppColors.Divider)
+                    VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)  // ← FIX 3
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text((userProfile?.connection ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                         Text("Connections", fontSize = 12.sp, color = AppColors.TextSecondary)
@@ -352,13 +343,11 @@ fun ProfileScreen(
         }
 
         // ---- Skills Cards (Learning + Known) ----
-        // Tap on card to see all skills in a dialog
         item {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Learning skills card
                 Card(
                     onClick = { selectedSkillType = "learning" },
                     modifier = Modifier.weight(1f),
@@ -378,7 +367,6 @@ fun ProfileScreen(
                     }
                 }
 
-                // Known skills card
                 Card(
                     onClick = { selectedSkillType = "known" },
                     modifier = Modifier.weight(1f),
@@ -415,7 +403,6 @@ fun ProfileScreen(
         }
 
         // ---- Posts Grid ----
-        // 2 posts per row, long press to see detail in bottom sheet
         items(dummyPosts.chunked(2)) { rowPosts ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
@@ -429,7 +416,7 @@ fun ProfileScreen(
                             .pointerInput(Unit) {
                                 detectTapGestures(onLongPress = { selectedPost = post })
                             },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),  // ← FIX 5: 16dp se 14dp
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
                         Box(
@@ -458,7 +445,6 @@ fun ProfileScreen(
                         }
                     }
                 }
-                // Fill empty space if only 1 post in row
                 if (rowPosts.size == 1) Spacer(modifier = Modifier.weight(1f))
             }
         }
@@ -505,25 +491,22 @@ fun ImagePickerDialog(
 
 // Separate function for uploading to Cloudinary
 fun uploadToCloudinary(context: android.content.Context, uri: Uri, viewModel: ProfileViewModel) {
-    val cloudName = "db7wneko6" // Your Cloudinary Cloud Name
-    val uploadPreset = "peerlearn_avatar" // SAHI
+    val cloudName = "db7wneko6"
+    val uploadPreset = "peerlearn_avatar"
 
     val stream = context.contentResolver.openInputStream(uri) ?: return
     val originalBitmap = android.graphics.BitmapFactory.decodeStream(stream)
     stream.close()
 
-// Square crop - center se
     val size = minOf(originalBitmap.width, originalBitmap.height)
     val x = (originalBitmap.width - size) / 2
     val y = (originalBitmap.height - size) / 2
     val cropped = android.graphics.Bitmap.createBitmap(originalBitmap, x, y, size, size)
 
-// Resize to 400x400
     val resized = android.graphics.Bitmap.createScaledBitmap(cropped, 400, 400, true)
     val baos = java.io.ByteArrayOutputStream()
     resized.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, baos)
     val bytes = baos.toByteArray()
-
 
     Thread {
         try {
@@ -558,7 +541,6 @@ fun uploadToCloudinary(context: android.content.Context, uri: Uri, viewModel: Pr
         }
     }.start()
 }
-
 
 @Preview(showBackground = true)
 @Composable
