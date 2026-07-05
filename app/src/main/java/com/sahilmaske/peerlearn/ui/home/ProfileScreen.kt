@@ -47,6 +47,7 @@ import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    uid: String? = null,
     viewModel: ProfileViewModel = viewModel()
 ) {
     // ---- State & Data ----

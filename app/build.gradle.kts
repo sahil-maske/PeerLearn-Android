@@ -48,8 +48,10 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation(platform(libs.firebase.bom))
+    implementation(libs.androidx.compose.runtime)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

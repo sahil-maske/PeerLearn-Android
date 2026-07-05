@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
@@ -35,6 +37,7 @@ import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
 @Composable
 fun NaviScreen(
+    navController: NavController,
     profileViewModel: ProfileViewModel = viewModel(),
     feedViewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
@@ -75,7 +78,7 @@ fun NaviScreen(
             modifier = Modifier.fillMaxSize()
         ) { screen ->
             when (screen) {
-                0 -> HomeScreen(viewModel = feedViewModel)
+                0 -> HomeScreen(viewModel = feedViewModel, navController = navController)
                 1 -> QAScreen()
                 2 -> ChatScreen()
                 3 -> ProfileScreen(viewModel = profileViewModel)
@@ -177,6 +180,6 @@ fun AnimatedBottomNav(
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-
-        NaviScreen()
+        val navController = rememberNavController()
+        NaviScreen(navController = navController)
 }

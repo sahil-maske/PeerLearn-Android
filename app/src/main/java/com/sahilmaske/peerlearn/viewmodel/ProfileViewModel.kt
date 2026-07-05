@@ -1,11 +1,15 @@
 package com.sahilmaske.peerlearn.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.sahilmaske.peerlearn.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlin.jvm.java
 
 class ProfileViewModel : ViewModel() {
 
@@ -46,6 +50,22 @@ class ProfileViewModel : ViewModel() {
                 _uiState.value = ProfileState.Error(it.message ?: "Failed to save profile")
             }
     }
+
+    fun loadProfile(uid: String?) {
+        val targetUid = uid ?: auth.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            try {
+                _uiState.value = ProfileState.Loading
+                val doc = db.collection("users").document(targetUid).get().await()
+                _userProfile.value = doc.toObject(User::class.java)
+                _uiState.value = ProfileState.Success
+            } catch (e: Exception) {
+                _uiState.value = ProfileState.Error(e.message ?: "Failed to load profile")
+            }
+        }
+    }
+
 }
 
 sealed class ProfileState {

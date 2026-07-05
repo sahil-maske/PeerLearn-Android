@@ -2,6 +2,7 @@ package com.sahilmaske.peerlearn.model
 
 data class PeerSuggestion(
     val id: String = "",
+    val uid: String = "",
     val name: String = "",
     val avatarUrl: String = "",
     val knowSkill: String = "",

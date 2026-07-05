@@ -30,17 +30,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.PeerSuggestionCard
+import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.SeeAllPeersScreen
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
 @Composable
 fun HomeScreen(
+    navController: NavController,
     profileViewModel: ProfileViewModel = viewModel(),
     viewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
 
     )
+
 ) {
 
     val suggestions by viewModel.suggestions.collectAsState()
@@ -107,7 +112,9 @@ fun HomeScreen(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF6C63FF),
-                        modifier = Modifier.clickable { /* navigate */ }
+                        modifier = Modifier.clickable {
+                            navController.navigate("see_all_peers")
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -132,5 +139,6 @@ fun HomeScreen(
 @Preview(showBackground = true)
 @Composable
 fun FeedScreenPreview() {
-    HomeScreen()
+    val navController = rememberNavController()
+    HomeScreen(navController = navController)
 }
