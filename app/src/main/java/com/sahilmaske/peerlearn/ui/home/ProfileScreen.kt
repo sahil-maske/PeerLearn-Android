@@ -285,21 +285,23 @@ fun ProfileScreen(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                "${userProfile?.knownSkills?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "I know this Skill"} • ${userProfile?.location ?: "User Location"}",
+                text = " ${userProfile?.location ?: " - User Location"}",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 14.sp,
                 color = AppColors.TextSecondary
             )
             Spacer(Modifier.height(4.dp))
-            Text(
+          /*  Text(
                 userProfile?.learningSkills?.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "I want to learn this Skill",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 14.sp,
                 color = AppColors.TextSecondary
             )
-            Spacer(Modifier.height(16.dp))
+
+           */
+            Spacer(Modifier.height(8.dp))
         }
 
         // ---- Stats Card (Posts, Helps, Connections) ----
