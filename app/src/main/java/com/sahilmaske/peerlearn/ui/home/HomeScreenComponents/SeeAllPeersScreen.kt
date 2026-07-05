@@ -36,6 +36,9 @@ import com.sahilmaske.peerlearn.model.PeerSuggestion
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
+
+
+
 @Composable
 fun SeeAllPeersScreen(
     navController: NavController,
@@ -49,14 +52,13 @@ fun SeeAllPeersScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 18.dp, vertical = 6.dp)
-            .statusBarsPadding()
+            .statusBarsPadding()   // ← horizontal padding yahan se hataya
     ) {
         // ---- Custom Top Bar ----
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),   // ← ye akela padding kaafi hai
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -73,8 +75,7 @@ fun SeeAllPeersScreen(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF000000),
-                modifier = Modifier
-
+                        modifier = Modifier
                     .clickable { navController.popBackStack() }
             )
         }
@@ -82,8 +83,8 @@ fun SeeAllPeersScreen(
         // ---- List ----
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            contentPadding = PaddingValues(16.dp),           // 4dp → 16dp
+            verticalArrangement = Arrangement.spacedBy(12.dp) // 2dp → 12dp
         ) {
             items(suggestions) { peer ->
                 PeerRowCard(
@@ -94,8 +95,13 @@ fun SeeAllPeersScreen(
         }
     }
 }
+
 @Preview(showBackground = true)
 @Composable
 fun SeeAllPeersScreenPreview() {
-     SeeAllPeersScreen(navController = rememberNavController())
+    val profileViewModel: ProfileViewModel = viewModel()
+    SeeAllPeersScreen(
+        navController = rememberNavController(),
+        profileViewModel = profileViewModel
+    )
 }
