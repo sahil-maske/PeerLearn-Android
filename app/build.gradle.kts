@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-base:18.10.0")
     implementation("androidx.activity:activity-compose:1.9.0")
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")

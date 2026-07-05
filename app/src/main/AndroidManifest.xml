@@ -6,6 +6,12 @@
 
     <queries>
         <package android:name="com.google.android.gms" />
+        <intent>
+            <action android:name="com.google.android.gms.ads.identifier.service.START" />
+        </intent>
+        <intent>
+            <action android:name="com.google.android.gms.auth.api.signin.Service.START" />
+        </intent>
     </queries>
 
     <application

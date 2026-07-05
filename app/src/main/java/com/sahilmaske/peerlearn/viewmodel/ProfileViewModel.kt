@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlin.jvm.java
 
 class ProfileViewModel : ViewModel() {
 
@@ -17,9 +16,12 @@ class ProfileViewModel : ViewModel() {
     private val db by lazy { FirebaseFirestore.getInstance() }
 
     private val _userProfile = MutableStateFlow<User?>(null)
-
     val userProfile: StateFlow<User?> = _userProfile
-    fun fetchUserProfile(uid : String) {
+
+    private val _uiState = MutableStateFlow<ProfileState>(ProfileState.Idle)
+    val uiState: StateFlow<ProfileState> = _uiState
+
+    fun fetchUserProfile(uid: String) {
         _uiState.value = ProfileState.Loading
         db.collection("users")
             .document(uid)
@@ -33,9 +35,6 @@ class ProfileViewModel : ViewModel() {
                 _uiState.value = ProfileState.Error(it.message ?: "Failed to fetch user profile")
             }
     }
-
-    private val _uiState = MutableStateFlow<ProfileState>(ProfileState.Idle)
-    val uiState: StateFlow<ProfileState> = _uiState
 
     fun saveProfile(user: User) {
         _uiState.value = ProfileState.Loading
@@ -52,20 +51,35 @@ class ProfileViewModel : ViewModel() {
     }
 
     fun loadProfile(uid: String?) {
-        val targetUid = uid ?: auth.currentUser?.uid ?: return
+        val targetUid = uid ?: auth.currentUser?.uid
+        android.util.Log.d("ProfileDebug", "loadProfile called. targetUid: $targetUid")
+        
+        if (targetUid == null) {
+            android.util.Log.e("ProfileDebug", "targetUid is null, returning")
+            return
+        }
 
         viewModelScope.launch {
             try {
                 _uiState.value = ProfileState.Loading
                 val doc = db.collection("users").document(targetUid).get().await()
-                _userProfile.value = doc.toObject(User::class.java)
+                android.util.Log.d("ProfileDebug", "loadProfile success. doc exists: ${doc.exists()}")
+                
+                if (doc.exists()) {
+                    val user = doc.toObject(User::class.java)
+                    android.util.Log.d("ProfileDebug", "User object: $user")
+                    _userProfile.value = user
+                } else {
+                    android.util.Log.e("ProfileDebug", "No document found for UID: $targetUid")
+                }
+                
                 _uiState.value = ProfileState.Success
             } catch (e: Exception) {
+                android.util.Log.e("ProfileDebug", "loadProfile error: ${e.message}", e)
                 _uiState.value = ProfileState.Error(e.message ?: "Failed to load profile")
             }
         }
     }
-
 }
 
 sealed class ProfileState {

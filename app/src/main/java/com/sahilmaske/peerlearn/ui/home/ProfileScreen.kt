@@ -55,9 +55,9 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     // Fetch current user profile on first launch
-    LaunchedEffect(Unit) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
-        viewModel.fetchUserProfile(uid)
+    LaunchedEffect(uid) {
+        val targetUid = uid ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
+        viewModel.fetchUserProfile(targetUid)
     }
 
     // Dialog/sheet states

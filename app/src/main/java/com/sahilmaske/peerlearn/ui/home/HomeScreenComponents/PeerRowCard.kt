@@ -44,13 +44,13 @@ fun PeerRowCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp)   // card ke bahar ka margin
-            .clip(RoundedCornerShape(18.dp))                // pehle shape define
-            .background(Color(0xFFFFFFFF))                  // fir background
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFFFFFFFF))
             .clickable {
-                navController.navigate("profile/${peer.uid}")
+                navController.navigate("profile/${peer.uid}")   // ← poora card click karega, sirf avatar nahi
             }
-            .padding(14.dp),                                // sabse last — content padding
+            .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // ---- Avatar ----
@@ -99,7 +99,6 @@ fun PeerRowCard(
                 text = "Knows • ${peer.knowSkill}",
                 fontSize = 12.5.sp,
                 color = Color(0xFF8A8A8E),
-                fontWeight = FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -108,7 +107,6 @@ fun PeerRowCard(
                 text = "Learning • ${peer.learnSkill}",
                 fontSize = 12.5.sp,
                 color = Color(0xFF8A8A8E),
-                fontWeight = FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -139,9 +137,7 @@ fun PeerRowCard(
                 onClick = { /* connect logic */ },
                 modifier = Modifier.height(30.dp),
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF6C63FF)
-                )
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6C63FF))
             ) {
                 Text(
                     text = "Connect",

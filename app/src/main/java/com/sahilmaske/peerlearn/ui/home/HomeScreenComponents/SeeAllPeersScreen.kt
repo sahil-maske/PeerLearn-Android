@@ -1,13 +1,14 @@
 package com.sahilmaske.peerlearn.ui.home.HomeScreenComponents
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -17,9 +18,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,12 +33,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.sahilmaske.peerlearn.model.PeerSuggestion
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
-
-
-
 
 @Composable
 fun SeeAllPeersScreen(
@@ -47,50 +44,47 @@ fun SeeAllPeersScreen(
         factory = FeedViewModel.provideFactory(profileViewModel)
     )
 ) {
-    val suggestions by viewModel.suggestions.collectAsState()
+    val allPeers by viewModel.allPeers.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadAllPeers()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()   // ← horizontal padding yahan se hataya
+            .statusBarsPadding()
+            .background(Color(0xFFF8F8F8))
+            .padding(16.dp)
     ) {
-        // ---- Custom Top Bar ----
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),   // ← ye akela padding kaafi hai
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = Color(0xFF000000),
                 modifier = Modifier
                     .size(24.dp)
                     .clickable { navController.popBackStack() }
             )
-            Spacer(Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = "All Peers",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF000000),
-                        modifier = Modifier
-                    .clickable { navController.popBackStack() }
+                color = Color.Black
             )
         }
 
-        // ---- List ----
+        Spacer(modifier = Modifier.height(16.dp))
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),           // 4dp → 16dp
-            verticalArrangement = Arrangement.spacedBy(12.dp) // 2dp → 12dp
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(suggestions) { peer ->
-                PeerRowCard(
-                    peer = peer,
-                    navController = navController
-                )
+            items(allPeers) { peer ->
+                PeerRowCard(peer = peer, navController = navController)
             }
         }
     }
@@ -98,10 +92,7 @@ fun SeeAllPeersScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun SeeAllPeersScreenPreview() {
-    val profileViewModel: ProfileViewModel = viewModel()
-    SeeAllPeersScreen(
-        navController = rememberNavController(),
-        profileViewModel = profileViewModel
-    )
+fun SeeAllPeersPreview() {
+    val navController = rememberNavController()
+    SeeAllPeersScreen(navController = navController)
 }
