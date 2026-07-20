@@ -1,0 +1,4 @@
+- [ ] Refactor `NaviScreen` to extract `NaviScreenContent`
+- [ ] Update `NaviScreen` to use `NaviScreenContent`
+- [ ] Update `HomeScreenPreview` to use `NaviScreenContent` with mock data
+- [ ] Verify Preview renders correctly

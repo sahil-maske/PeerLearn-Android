@@ -1,0 +1,4 @@
+- [ ] Fix unresolved reference `UserProfile` in `HomeScreen.kt`
+    - [ ] Update import statement
+    - [ ] Update `HomeScreenContent` parameter type
+- [ ] Verify fix by compiling the project
