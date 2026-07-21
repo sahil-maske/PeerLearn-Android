@@ -23,6 +23,7 @@ object AppColors {
     val Divider = Color(0xFFE0E0E0)
     val Icon = Color.Black
     val IconVariant = Color(0xFF8E8E93)
+    val DarkGreen = Color(0xFF0F6E6E)
     
     // Skill Chip Colors
     val SkillKnownBg = Color(0xFFE1F5EE)

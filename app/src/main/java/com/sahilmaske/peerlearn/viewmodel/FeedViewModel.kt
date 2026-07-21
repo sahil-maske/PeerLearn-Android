@@ -148,6 +148,7 @@ class FeedViewModel(
 
             val name = doc.getString("name") ?: "Unknown"
             val avatarUrl = doc.getString("avatarUrl") ?: ""
+            val college = doc.getString("college") ?: ""
             val knownSkills = doc.get("knownSkills") as? List<String> ?: emptyList()
             val learningSkills = doc.get("learningSkills") as? List<String> ?: emptyList()
 
@@ -158,6 +159,7 @@ class FeedViewModel(
                 uid = uid,
                 name = name,
                 avatarUrl = avatarUrl,
+                institution = college,
                 knowSkill = knownSkills.joinToString(", "),
                 learnSkill = learningSkills.joinToString(", "),
                 matchPercentage = match

@@ -23,14 +23,14 @@ class HomeViewModel : ViewModel() {
 
     private fun loadDummyData() {
         _suggestions.value = listOf(
-            PeerSuggestion("1", "Riya Sharma", "", "UI/UX • Figma"),
-            PeerSuggestion("2", "Aman Verma", "", "Kotlin • Backend"),
-            PeerSuggestion("3", "Neha Patil", "", "Python • ML")
+            PeerSuggestion(id = "1", name = "Riya Sharma", knowSkill = "UI/UX • Figma"),
+            PeerSuggestion(id = "2", name = "Aman Verma", knowSkill = "Kotlin • Backend"),
+            PeerSuggestion(id = "3", name = "Neha Patil", knowSkill = "Python • ML")
         )
         _posts.value = listOf(
-            Post("p1", "Riya Sharma", "", "Just finished my first Compose animation! 🎉", likeCount = 12, commentCount = 3, timeAgo = "1h"),
-            Post("p2", "Aman Verma", "", "Anyone up for a DSA study group this week?", likeCount = 8, commentCount = 5, timeAgo = "3h"),
-            Post("p3", "Neha Patil", "", "Sharing my ML project notes soon, stay tuned!", likeCount = 20, commentCount = 7, timeAgo = "5h")
+            Post(id = "p1", authorName = "Riya Sharma", description = "Just finished my first Compose animation! 🎉", likeCount = 12, commentCount = 3, timeAgo = "1h"),
+            Post(id = "p2", authorName = "Aman Verma", description = "Anyone up for a DSA study group this week?", likeCount = 8, commentCount = 5, timeAgo = "3h"),
+            Post(id = "p3", authorName = "Neha Patil", description = "Sharing my ML project notes soon, stay tuned!", likeCount = 20, commentCount = 7, timeAgo = "5h")
         )
     }
 }

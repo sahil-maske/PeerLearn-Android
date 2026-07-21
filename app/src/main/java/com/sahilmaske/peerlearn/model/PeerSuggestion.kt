@@ -5,6 +5,7 @@ data class PeerSuggestion(
     val uid: String = "",
     val name: String = "",
     val avatarUrl: String = "",
+    val institution: String = "",
     val knowSkill: String = "",
     val learnSkill: String = "",
     val matchPercentage: Int = 0

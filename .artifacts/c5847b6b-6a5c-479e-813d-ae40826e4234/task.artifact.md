@@ -1,4 +1,6 @@
-- [ ] Fix unresolved reference `UserProfile` in `HomeScreen.kt`
-    - [ ] Update import statement
-    - [ ] Update `HomeScreenContent` parameter type
-- [ ] Verify fix by compiling the project
+- [x] Fix unresolved reference errors in `PeerSuggestionCard.kt`
+    - [x] Add `institution` to `PeerSuggestion` model
+    - [x] Fix typo `collage` -> `institution` in `PeerSuggestionCard.kt`
+    - [x] Use `learnSkill` instead of `wantSkill` in `PeerSuggestionCard.kt`
+    - [x] Update `FeedViewModel.kt` to map `college` to `institution`
+- [x] Verify fix by analyzing `PeerSuggestionCard.kt`

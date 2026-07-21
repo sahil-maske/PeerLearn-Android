@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,12 +19,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -54,8 +49,6 @@ import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
-private val TealPrimary = Color(0xFF0F6E6E)
-
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -74,11 +67,7 @@ fun HomeScreen(
         posts = posts,
         onSeeAllClick = {
             navController.navigate("see_all_peers")
-        },
-        onHomeClick = { /* already on home */ },
-        onSearchClick = { navController.navigate("search") },
-        onAddClick = { navController.navigate("create_post") },
-        onProfileClick = { navController.navigate("profile") }
+        }
     )
 }
 
@@ -87,231 +76,151 @@ fun HomeScreenContent(
     userProfile: User?,
     suggestions: List<PeerSuggestion>,
     posts: List<Post>,
-    onSeeAllClick: () -> Unit,
-    onHomeClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
-    onAddClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onSeeAllClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // ---- Top Bar ----
+        Row(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // ---- Top Bar ----
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            // Logo + App name
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.School,
+                    contentDescription = null,
+                    tint = Color(0xFF0F6E6E),
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "PeerLearn",
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0F6E6E)
+                )
+            }
+
+            // Bell + Avatar
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { /* navigate to notifications */ }) {
                     Icon(
-                        Icons.Default.School,
-                        contentDescription = null,
-                        tint = TealPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "PeerLearn",
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TealPrimary
+                        Icons.Outlined.Notifications,
+                        contentDescription = "Notifications",
+                        tint = AppColors.Icon,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { /* navigate to notifications */ }) {
-                        Icon(
-                            Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
-                            tint = AppColors.Icon,
-                            modifier = Modifier.size(24.dp)
-                        )
+                Spacer(Modifier.width(4.dp))
+                if (userProfile?.avatarUrl.isNullOrEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.SecondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val initials = userProfile?.name
+                            ?.split(" ")
+                            ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
+                            ?.take(2)
+                            ?.joinToString("") ?: "?"
+                        Text(initials, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                     }
-                    Spacer(Modifier.width(4.dp))
-                    if (userProfile?.avatarUrl.isNullOrEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.SecondaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val initials = userProfile?.name
-                                ?.split(" ")
-                                ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
-                                ?.take(2)
-                                ?.joinToString("") ?: "?"
-                            Text(initials, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                        }
-                    } else {
-                        AsyncImage(
-                            model = userProfile?.avatarUrl,
-                            contentDescription = "Avatar",
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
+                } else {
+                    AsyncImage(
+                        model = userProfile.avatarUrl,
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
 
-            // ---- Scrollable content ----
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // ---- Greeting ----
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                    ) {
-                        val firstName = userProfile?.name?.split(" ")?.firstOrNull() ?: "there"
-                        Text(
-                            text = "Good morning, $firstName",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Ready to share a skill today?",
-                            fontSize = 15.sp,
-                            color = Color(0xFF6B6B6B)
-                        )
-                    }
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Recommended Peers",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "See all",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TealPrimary,
-                            modifier = Modifier.clickable { onSeeAllClick() }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        modifier = Modifier.padding(start = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(suggestions) { peer ->
-                            PeerSuggestionCard(peer = peer)
-                        }
-                    }
-                }
-                item {
+        }
+        // ---- Scrollable content ----
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // ---- Greeting ----
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    val firstName = userProfile?.name?.split(" ")?.firstOrNull() ?: "there"
                     Text(
-                        text = "Community Feed",
+                        text = "Good morning, $firstName",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Ready to share a skill today?",
+                        fontSize = 15.sp,
+                        color = Color(0xFF6B6B6B)
+                    )
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recommended Peers",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.Black,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        color = Color(0xFF000000)
+                    )
+                    Text(
+                        text = "See all",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF0F6E6E),
+                        modifier = Modifier.clickable {
+                            onSeeAllClick()
+                        }
                     )
                 }
-                items(posts) { post ->
-                    PostCard(
-                        post = post,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(suggestions) { peer ->
+                        PeerSuggestionCard(peer = peer)
+                    }
                 }
             }
-        }
-
-        // ---- Bottom Navigation Bar ----
-        BottomNavBar(
-            onHomeClick = onHomeClick,
-            onSearchClick = onSearchClick,
-            onAddClick = onAddClick,
-            onProfileClick = onProfileClick
-        )
-    }
-}
-
-@Composable
-fun BottomNavBar(
-    onHomeClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    onAddClick: () -> Unit,
-    onProfileClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Home (active/filled teal circle)
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(TealPrimary)
-                .clickable { onHomeClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Home,
-                contentDescription = "Home",
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
-        IconButton(onClick = onSearchClick) {
-            Icon(
-                Icons.Outlined.Search,
-                contentDescription = "Search",
-                tint = AppColors.Icon,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        IconButton(onClick = onAddClick) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Add",
-                tint = AppColors.Icon,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        IconButton(onClick = onProfileClick) {
-            Icon(
-                Icons.Outlined.Person,
-                contentDescription = "Profile",
-                tint = AppColors.Icon,
-                modifier = Modifier.size(24.dp)
-            )
+            item {
+                Text(
+                    text = "Community Feed",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF000000)
+                )
+            }
+            items(posts) { post ->
+                PostCard(post = post)
+            }
         }
     }
 }
@@ -333,50 +242,20 @@ fun FeedScreenPreview() {
 }
 
 @Composable
-fun PostCard(post: Post, modifier: Modifier = Modifier) {
+fun PostCard(post: Post) {
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Avatar with initials, orange like the reference
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF5A623)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val initials = post.authorName
-                        .split(" ")
-                        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
-                        .take(2)
-                        .joinToString("")
-                    Text(initials, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(text = post.authorName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(
-                        text = post.timeAgo, // e.g. "2 hours ago" — add this field to Post if missing
-                        fontSize = 12.sp,
-                        color = Color(0xFF8A8A8A)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = post.heading,
-                fontWeight = FontWeight.SemiBold,
-                color = TealPrimary,
-                fontSize = 15.sp
-            )
+            Text(text = post.authorName, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = post.description, fontSize = 14.sp, color = Color(0xFF3A3A3A))
+            Text(text = post.heading, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = post.description)
         }
     }
 }

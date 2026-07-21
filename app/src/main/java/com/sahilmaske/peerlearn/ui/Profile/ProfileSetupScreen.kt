@@ -37,7 +37,7 @@ fun ProfileSetupScreen(
     var location by remember { mutableStateOf("") }
 
     // Step 2 fields
-    var bio by remember { mutableStateOf("") }
+    var about by remember { mutableStateOf("") }
     var knownSkills by remember { mutableStateOf(listOf<String>()) }
     var learningSkills by remember { mutableStateOf(listOf<String>()) }
     var knownInput by remember { mutableStateOf("") }
@@ -318,8 +318,8 @@ fun ProfileSetupScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 OutlinedTextField(
-                    value = bio,
-                    onValueChange = { bio = it },
+                    value = about,
+                    onValueChange = { about = it },
                     label = { Text("Bio (optional)", color = AppColors.TextSecondary) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
@@ -361,7 +361,7 @@ fun ProfileSetupScreen(
                                 name = name,
                                 college = college,
                                 location = location,
-                                bio = bio,
+                                about = about,
                                 knownSkills = knownSkills,
                                 learningSkills = learningSkills,
                             )

@@ -7,7 +7,7 @@ data class User(
     val role : String = "",
     val knownSkills : List<String> = emptyList(),
     val learningSkills : List<String> = emptyList(),
-    val bio : String = "",
+    val about : String = "",
     val avatarUrl : String = "",
     val location : String = "",
     val connection : Int = 0,

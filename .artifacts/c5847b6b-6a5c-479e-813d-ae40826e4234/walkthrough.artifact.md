@@ -1,28 +1,22 @@
-# Walkthrough - Fix Unresolved reference 'UserProfile'
+# Walkthrough - Fix Errors in PeerSuggestionCard.kt
 
-I have fixed the compilation error in `HomeScreen.kt` where the class `UserProfile` was being referenced but not found. The correct class in the project is `User`.
+I have fixed the compilation errors in `PeerSuggestionCard.kt` by updating the `PeerSuggestion` model and correcting field references in the UI and ViewModel.
 
 ## Changes
 
 ### [app]
 
-#### [HomeScreen.kt](file:///D:/PeerLearn2/app/src/main/java/com/sahilmaske/peerlearn/ui/home/HomeScreen.kt)
+#### [PeerSuggestion.kt](file:///D:/PeerLearn2/app/src/main/java/com/sahilmaske/peerlearn/model/PeerSuggestion.kt)
+- Added `institution` field to match the requirements of `PeerSuggestionCard`.
 
-- Updated the import from `com.sahilmaske.peerlearn.model.UserProfile` to `com.sahilmaske.peerlearn.model.User`.
-- Updated the `userProfile` parameter type in `HomeScreenContent` to `User?`.
+#### [PeerSuggestionCard.kt](file:///D:/PeerLearn2/app/src/main/java/com/sahilmaske/peerlearn/ui/home/HomeScreenComponents/PeerSuggestionCard.kt)
+- Fixed typo: changed `peer.collage` to `peer.institution`.
+- Updated to use the existing `learnSkill` field instead of the undefined `wantSkill`.
 
-```diff
--import com.sahilmaske.peerlearn.model.UserProfile
-+import com.sahilmaske.peerlearn.model.User
-...
- @Composable
- fun HomeScreenContent(
--    userProfile: UserProfile?,                    // FIX: new param replaces undefined avatarUrl
-+    userProfile: User?,                    // FIX: new param replaces undefined avatarUrl
-     suggestions: List<PeerSuggestion>,
-```
+#### [FeedViewModel.kt](file:///D:/PeerLearn2/app/src/main/java/com/sahilmaske/peerlearn/viewmodel/FeedViewModel.kt)
+- Updated mapping logic to fetch `college` from Firestore and assign it to `institution` in `PeerSuggestion`.
 
 ## Verification Results
 
 ### Automated Tests
-- Executed `./gradlew :app:compileDebugKotlin` which finished successfully.
+- Analyzed `PeerSuggestionCard.kt` and confirmed that all compilation errors are resolved. Only a package naming warning remains.
