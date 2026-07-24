@@ -19,6 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AddCircle
+import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +46,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
+import androidx.compose.ui.platform.LocalInspectionMode
 
 @Composable
 fun NaviScreen(
@@ -53,17 +57,19 @@ fun NaviScreen(
     )
 ) {
     var selectedItem by remember { mutableIntStateOf(0) }
-    val items = listOf("Home", "QA", "Chat", "Profile")
+    val items = listOf("Home", "Post", "Chat", "Profile")
     val icons = listOf(
         Icons.Default.Home,
-        Icons.Default.QuestionAnswer,
+        Icons.Default.PostAdd,
         Icons.AutoMirrored.Filled.Chat,
         Icons.Default.Person
     )
 
     val userProfile by profileViewModel.userProfile.collectAsState()
 
+    val isPreview = LocalInspectionMode.current
     LaunchedEffect(Unit) {
+        if (isPreview) return@LaunchedEffect
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid != null) {
             profileViewModel.fetchUserProfile(uid)
@@ -110,7 +116,7 @@ fun NaviScreen(
         ) { screen ->
             when (screen) {
                 0 -> HomeScreen(viewModel = feedViewModel, navController = navController)
-                1 -> QAScreen()
+                1 -> PostScreen()
                 2 -> ChatScreen()
                 3 -> ProfileScreen(viewModel = profileViewModel)
             }
@@ -146,9 +152,7 @@ fun AnimatedBottomNav(
     selectedItem: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    // Pill — LIQUID GLASS background, selected tab EXPANDS to show icon + label
-    // FIX: opacity raised + dark scrim layer added underneath so nav stays legible
-    // over ANY background — bright gradient post cards, photos, or plain colors.
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -244,10 +248,10 @@ fun AnimatedBottomNavPreview() {
             .padding(24.dp)
     ) {
         AnimatedBottomNav(
-            items = listOf("Home", "QA", "Chat", "Profile"),
+            items = listOf("Home", "Post", "Chat", "Profile"),
             icons = listOf(
                 Icons.Default.Home,
-                Icons.Default.QuestionAnswer,
+                Icons.Rounded.AddCircle,
                 Icons.AutoMirrored.Filled.Chat,
                 Icons.Default.Person
             ),

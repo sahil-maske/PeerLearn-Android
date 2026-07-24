@@ -1,0 +1,5 @@
+- [x] `[x]` Fix Firebase initialization crash in `ProfileScreen`
+- [x] `[x]` Verify `ProfileScreenPreview` renders without errors
+- [x] `[x]` Fix Firebase initialization crash in `NaviScreen`
+- [x] `[x]` Fix missing imports and structure in `PostScreen`
+- [x] `[x]` Verify `PostScreen` renders correctly

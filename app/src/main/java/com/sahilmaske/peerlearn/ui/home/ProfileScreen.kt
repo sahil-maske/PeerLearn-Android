@@ -49,6 +49,8 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import androidx.compose.ui.platform.LocalInspectionMode
+import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.ui.components.SlideToSwapButton
 import com.sahilmaske.peerlearn.ui.theme.AppColors
@@ -64,20 +66,38 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel()
 ) {
     // ---- State & Data ----
-    val userProfile by viewModel.userProfile.collectAsState()
+    val userProfileFromVM by viewModel.userProfile.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+
+    val isPreview = LocalInspectionMode.current
+
+    val userProfile = if (isPreview) {
+        User(
+            uid = "preview_uid",
+            name = "Sahil Maske",
+            college = "Modern College",
+            role = "Android Developer",
+            knownSkills = listOf("Kotlin", "Compose", "Firebase"),
+            learningSkills = listOf("Rust", "Three.js"),
+            about = "Passionate about building beautiful and performant Android apps.",
+            location = "Pune, India",
+            connection = 124,
+            postCount = 12,
+            helpCount = 45
+        )
+    } else {
+        userProfileFromVM
+    }
 
     // Fetch current user profile on first launch
     LaunchedEffect(uid) {
+        if (isPreview) return@LaunchedEffect
         val targetUid = uid ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
         viewModel.fetchUserProfile(targetUid)
     }
 
-    // FIX: determine whether this is MY profile or SOMEONE ELSE'S profile
-    // If uid is null (default) -> viewing own profile
-    // If uid is passed and matches current logged-in user -> also own profile
-    // Otherwise -> viewing another peer's profile
-    val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
+
+    val currentUserUid = if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid
     val isOwnProfile = uid == null || uid == currentUserUid
 
     // ---- Responsive sizing (compatible across all mobile widths) ----
