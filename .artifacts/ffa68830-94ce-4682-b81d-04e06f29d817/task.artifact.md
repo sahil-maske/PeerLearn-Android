@@ -1,0 +1,7 @@
+- [x] Identify root cause of repeated crash: `.height(IntrinsicSize.Min)` on `BoxWithConstraints`.
+- [x] Fix `PostScreen.kt` again with a more robust implementation.
+    - [x] Remove `Modifier.height(IntrinsicSize.Min)` from `BoxWithConstraints`.
+    - [x] Wrap indicator in a `Box(Modifier.matchParentSize())` to allow `fillMaxHeight()` and fixed width simultaneously.
+    - [x] Remove unused `IntrinsicSize` import.
+- [x] Verify project builds successfully.
+- [ ] (Manual) Verify on device that the toggle looks and works correctly.
