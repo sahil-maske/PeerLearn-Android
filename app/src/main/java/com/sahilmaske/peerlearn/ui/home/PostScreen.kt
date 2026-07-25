@@ -1,8 +1,12 @@
 package com.sahilmaske.peerlearn.ui.home
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
@@ -36,12 +42,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 
 @Composable
@@ -267,39 +279,108 @@ fun PostScreen() {
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text(
-                text = "Add Tags",
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = AppColors.TextPrimary
-            )
-            Spacer(modifier = Modifier.height(10.dp))
 
-            var tags by remember { mutableStateOf(listOf("Beginner Friendly", "In-person")) }
-            var newTag by remember { mutableStateOf("") }
-            var showTagInput by remember { mutableStateOf(false) }
+            var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
-// "+ Add Tag" chip
-            Row(
+            val imagePickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                selectedImageUri = uri
+            }
+
+            Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(AppColors.Surface)
-                    .clickable { showTagInput = true }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxWidth()
+                    .aspectRatio(1.5f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { imagePickerLauncher.launch("image/*") }
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Tag",
-                    tint = AppColors.TextPrimary,
-                    modifier = Modifier.height(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Add Tag",
-                    fontSize = 13.sp,
-                    color = AppColors.TextPrimary
-                )
+                if (selectedImageUri != null) {
+                    // ---- Image selected: show it with gradient + preview text ----
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "Selected photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)),
+                                    startY = 100f
+                                )
+                            )
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "PREVIEW",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Your post will be visible to peers",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                } else {
+                    // ---- No image yet: attractive empty-state placeholder ----
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawRoundRect(
+                            color = androidx.compose.ui.graphics.Color(0xFF1D9E75),
+                            style = Stroke(
+                                width = 2.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f)
+                            ),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx())
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(AppColors.SkillKnownBg.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.AddAPhoto,
+                                contentDescription = "Add photo",
+                                tint = AppColors.DarkGreen,
+                                modifier = Modifier.height(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Tap to add a photo",
+                                color = AppColors.DarkGreen,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "or drop it here",
+                                color = AppColors.TextSecondary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Posts with photos get 3x more responses",
+                                color = AppColors.TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
             }
 
         }
