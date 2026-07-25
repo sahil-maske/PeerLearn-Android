@@ -20,10 +20,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -130,17 +133,10 @@ fun PostScreen() {
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ==================== INTENT TOGGLE ====================
-            // selectedIntent state track karta hai ki abhi "teach" selected hai ya "learn".
-            // Jab bhi ye value change hoti hai, Compose apne aap re-render karta hai
-            // aur indicatorOffset animate hoke naye position pe slide ho jaata hai.
+
             var selectedIntent by remember { mutableStateOf("teach") }
 
-            // BoxWithConstraints use kiya hai kyunki isse "maxWidth" mil jaati hai —
-            // yani container ki actual available width, jisse hum itemWidth (aadha) nikaal sakein.
-            //
-            // IMPORTANT: .height(IntrinsicSize.Min) zaroori hai warna neeche wale
-            // .fillMaxHeight() ko koi reference height nahi milegi (0 ho sakti hai).
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,12 +144,10 @@ fun PostScreen() {
                     .background(AppColors.Surface)
                     .padding(4.dp)
             ) {
-                // Container ki aadhi width — yahi ek single toggle option ki width hai
+
                 val itemWidth = maxWidth / 2
 
-                // Indicator ka horizontal position animate hota hai:
-                // "teach" selected -> offset 0 (left), "learn" selected -> offset itemWidth (right)
-                // spring() bouncy/natural feel deta hai, tween() se zyada smooth lagta hai
+
                 val indicatorOffset by animateDpAsState(
                     targetValue = if (selectedIntent == "teach") 0.dp else itemWidth,
                     animationSpec = spring(
@@ -163,9 +157,7 @@ fun PostScreen() {
                     label = "indicatorOffset"
                 )
 
-                // ---- LAYER 1 (peeche): Sliding teal indicator ----
-                // matchParentSize() wrapper Box use kiya hai jisse indicator
-                // background correctly fill ho sake bina Intrinsic measurement crash ke.
+               
                 Box(modifier = Modifier.matchParentSize()) {
                     Box(
                         modifier = Modifier
@@ -173,13 +165,10 @@ fun PostScreen() {
                             .width(itemWidth)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(50))
-                            .background(AppColors.DarkGreen)
+                            .background(AppColors.Primary)
                     )
                 }
 
-                // ---- LAYER 2 (upar): Clickable text labels ----
-                // Ye transparent hai, sirf click-detection aur text dikhane ke liye hai.
-                // Indicator peeche slide hota rehta hai, ye upar static rehta hai.
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Box(
                         modifier = Modifier
@@ -209,7 +198,110 @@ fun PostScreen() {
                         )
                     }
                 }
+
             }
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "What's the skill?",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.5.sp,
+                color = AppColors.TextPrimary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            var skill by remember { mutableStateOf("") }
+
+            OutlinedTextField(
+                value = skill,
+                onValueChange = { skill = it },
+                placeholder = {
+                    Text(
+                        text = "e.g. Urban Gardening, UI/UX Design",
+                        color = AppColors.TextSecondary
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = AppColors.Border,
+                    focusedBorderColor = AppColors.DarkGreen,
+                    unfocusedContainerColor = AppColors.Surface,
+                    focusedContainerColor = AppColors.Surface
+                )
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Description/Details",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = AppColors.TextPrimary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            var description by remember { mutableStateOf("") }
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                placeholder = {
+                    Text(
+                        text = if (selectedIntent == "teach")
+                            "Describe what you can teach and your experience..."
+                        else
+                            "Describe what you want to learn and your current level...",
+                        color = AppColors.TextSecondary
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = AppColors.Border,
+                    focusedBorderColor = AppColors.DarkGreen,
+                    unfocusedContainerColor = AppColors.Surface,
+                    focusedContainerColor = AppColors.Surface
+                )
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Add Tags",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = AppColors.TextPrimary
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            var tags by remember { mutableStateOf(listOf("Beginner Friendly", "In-person")) }
+            var newTag by remember { mutableStateOf("") }
+            var showTagInput by remember { mutableStateOf(false) }
+
+// "+ Add Tag" chip
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(AppColors.Surface)
+                    .clickable { showTagInput = true }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Tag",
+                    tint = AppColors.TextPrimary,
+                    modifier = Modifier.height(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Add Tag",
+                    fontSize = 13.sp,
+                    color = AppColors.TextPrimary
+                )
+            }
+
         }
     }
 }
