@@ -92,6 +92,7 @@ class MainActivity : ComponentActivity() {
                         val uid = backStackEntry.arguments?.getString("uid") ?: ""
                         ProfileScreen(uid = uid)
                     }
+
                 }
             }
         }

@@ -116,7 +116,9 @@ fun NaviScreen(
         ) { screen ->
             when (screen) {
                 0 -> HomeScreen(viewModel = feedViewModel, navController = navController)
-                1 -> PostScreen()
+                1 -> PostScreen(
+                    onClose = { selectedItem = 0 }
+                )
                 2 -> ChatScreen()
                 3 -> ProfileScreen(viewModel = profileViewModel)
             }
