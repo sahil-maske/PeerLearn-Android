@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.sahilmaske.peerlearn.model.Comment
 import com.sahilmaske.peerlearn.model.PeerSuggestion
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.util.calculateMatchPercentage
@@ -47,40 +50,95 @@ class FeedViewModel(
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts
 
+    // ---- Comments for whichever post is currently open in the bottom sheet ----
+    private val _comments = MutableStateFlow<List<Comment>>(emptyList())
+    val comments: StateFlow<List<Comment>> = _comments
+
     init {
         loadPosts()
         loadSuggestedPeers()
     }
 
+    // Real-time listener — jaise hi Firestore "posts" collection mein naya document
+    // add hota hai (PostScreen se post karne ke baad), ye list turant update ho jaati hai.
     fun loadPosts() {
         val user = auth.currentUser
         android.util.Log.d("FeedDebug", "loadPosts: UID=${user?.uid}, email=${user?.email}, isAnonymous=${user?.isAnonymous}")
 
-        user?.getIdToken(true)?.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                android.util.Log.d("FeedDebug", "Token OK, length=${task.result?.token?.length}")
-            } else {
-                android.util.Log.e("FeedDebug", "Token FAILED: ${task.exception?.message}", task.exception)
+        db.collection("posts")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    android.util.Log.e("FeedDebug", "loadPosts listener error: ${error.message}", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    android.util.Log.d("FeedDebug", "loadPosts listener: fetched ${snapshot.size()} posts")
+                    _posts.value = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Post::class.java)?.copy(id = doc.id)
+                    }
+                }
             }
-        }
+    }
 
-        android.util.Log.d("FeedDebug", "loadPosts called")
+    // ---- LIKE toggle ----
+    // arrayUnion/arrayRemove + increment() atomic operations hain — race-condition safe,
+    // isliye do log ek saath like kar rahe hon to bhi count sahi rahega.
+    fun toggleLike(postId: String, currentUserId: String, isCurrentlyLiked: Boolean) {
+        if (postId.isEmpty() || currentUserId.isEmpty()) return
+        val postRef = db.collection("posts").document(postId)
+        if (isCurrentlyLiked) {
+            postRef.update(
+                mapOf(
+                    "likedBy" to FieldValue.arrayRemove(currentUserId),
+                    "likeCount" to FieldValue.increment(-1)
+                )
+            )
+        } else {
+            postRef.update(
+                mapOf(
+                    "likedBy" to FieldValue.arrayUnion(currentUserId),
+                    "likeCount" to FieldValue.increment(1)
+                )
+            )
+        }
+    }
+
+    // ---- COMMENTS: real-time listener for a specific post's comments subcollection ----
+    fun loadComments(postId: String) {
+        if (postId.isEmpty()) return
+        db.collection("posts").document(postId).collection("comments")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    android.util.Log.e("FeedDebug", "loadComments error: ${error.message}", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    _comments.value = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Comment::class.java)?.copy(id = doc.id)
+                    }
+                }
+            }
+    }
+
+    // ---- Add a new comment + bump the post's commentCount ----
+    fun addComment(postId: String, authorId: String, authorName: String, authorAvatarUrl: String, text: String) {
+        if (postId.isEmpty() || text.isBlank()) return
         viewModelScope.launch {
             try {
-                val currentUser = auth.currentUser
-                if (currentUser == null) {
-                    android.util.Log.e("FeedDebug", "loadPosts error: User not authenticated")
-                    return@launch
-                }
-
-                val snapshot = db.collection("posts").get().await()
-                android.util.Log.d("FeedDebug", "loadPosts success: fetched ${snapshot.size()} posts")
-                _posts.value = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Post::class.java)?.copy(id = doc.id)
-                }
+                val comment = hashMapOf(
+                    "authorId" to authorId,
+                    "authorName" to authorName,
+                    "authorAvatarUrl" to authorAvatarUrl,
+                    "text" to text,
+                    "timestamp" to System.currentTimeMillis()
+                )
+                db.collection("posts").document(postId).collection("comments").add(comment).await()
+                db.collection("posts").document(postId)
+                    .update("commentCount", FieldValue.increment(1))
             } catch (e: Exception) {
-                android.util.Log.e("FeedDebug", "loadPosts error: ${e.message}", e)
-                e.printStackTrace()
+                android.util.Log.e("FeedDebug", "addComment error: ${e.message}", e)
             }
         }
     }
@@ -91,7 +149,7 @@ class FeedViewModel(
             try {
                 val currentUser = auth.currentUser
                 android.util.Log.d("FeedDebug", "loadSuggestedPeers: currentUser UID = ${currentUser?.uid}")
-                
+
                 val currentUserId = currentUser?.uid ?: return@launch
                 val mySkills = getMySkills(currentUserId)
                 android.util.Log.d("FeedDebug", "loadSuggestedPeers: mySkills = $mySkills")

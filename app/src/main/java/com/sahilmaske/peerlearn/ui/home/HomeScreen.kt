@@ -18,17 +18,27 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,11 +51,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.model.PeerSuggestion
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.CommentsBottomSheet
 import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.PeerSuggestionCard
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.util.timeAgo
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
@@ -67,17 +80,38 @@ fun HomeScreen(
         posts = posts,
         onSeeAllClick = {
             navController.navigate("see_all_peers")
-        }
+        },
+        onPeerClick = { uid ->
+            navController.navigate("profile/$uid")
+        },
+        viewModel = viewModel
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(
     userProfile: User?,
     suggestions: List<PeerSuggestion>,
     posts: List<Post>,
-    onSeeAllClick: () -> Unit
+    onSeeAllClick: () -> Unit,
+    onPeerClick: (String) -> Unit,
+    viewModel: FeedViewModel? = null
 ) {
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    // ---- Comments bottom sheet state ----
+    var activeCommentsPostId by remember { mutableStateOf<String?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+    val comments by (viewModel?.comments?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
+
+    LaunchedEffect(activeCommentsPostId) {
+        val postId = activeCommentsPostId
+        if (postId != null) {
+            viewModel?.loadComments(postId)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -88,13 +122,10 @@ fun HomeScreenContent(
     ) {
         // ---- Top Bar ----
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-//                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Logo + App name
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.School,
@@ -111,7 +142,6 @@ fun HomeScreenContent(
                 )
             }
 
-            // Bell + Avatar
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { /* navigate to notifications */ }) {
                     Icon(
@@ -148,8 +178,8 @@ fun HomeScreenContent(
                     )
                 }
             }
-
         }
+
         // ---- Scrollable content ----
         LazyColumn(
             modifier = Modifier
@@ -157,7 +187,6 @@ fun HomeScreenContent(
                 .weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ---- Greeting ----
             item {
                 Column(
                     modifier = Modifier
@@ -179,6 +208,7 @@ fun HomeScreenContent(
                     )
                 }
             }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -196,9 +226,7 @@ fun HomeScreenContent(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF0F6E6E),
-                        modifier = Modifier.clickable {
-                            onSeeAllClick()
-                        }
+                        modifier = Modifier.clickable { onSeeAllClick() }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -206,10 +234,14 @@ fun HomeScreenContent(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(suggestions) { peer ->
-                        PeerSuggestionCard(peer = peer)
+                        PeerSuggestionCard(
+                            peer = peer,
+                            onPeerClick = onPeerClick
+                        )
                     }
                 }
             }
+
             item {
                 Text(
                     text = "Community Feed",
@@ -218,11 +250,193 @@ fun HomeScreenContent(
                     color = Color(0xFF000000)
                 )
             }
+
             items(posts) { post ->
-                PostCard(post = post)
+                PostCard(
+                    post = post,
+                    currentUserId = currentUserId,
+                    onLikeClick = {
+                        val isLiked = currentUserId in post.likedBy
+                        viewModel?.toggleLike(post.id, currentUserId, isLiked)
+                    },
+                    onCommentClick = {
+                        activeCommentsPostId = post.id
+                    }
+                )
             }
         }
     }
+
+    // ---- Comments Bottom Sheet ----
+    if (activeCommentsPostId != null) {
+        CommentsBottomSheet(
+            comments = comments,
+            sheetState = sheetState,
+            onDismiss = { activeCommentsPostId = null },
+            onSendComment = { text ->
+                val postId = activeCommentsPostId
+                if (postId != null) {
+                    viewModel?.addComment(
+                        postId = postId,
+                        authorId = currentUserId,
+                        authorName = userProfile?.name ?: "Anonymous",
+                        authorAvatarUrl = userProfile?.avatarUrl ?: "",
+                        text = text
+                    )
+                }
+            }
+        )
+    }
+}
+
+// ==================== POST CARD (X/Twitter style) ====================
+@Composable
+fun PostCard(
+    post: Post,
+    currentUserId: String = "",
+    onLikeClick: () -> Unit = {},
+    onCommentClick: () -> Unit = {}
+) {
+    val initials = post.authorName
+        .split(" ")
+        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .take(2)
+        .joinToString("")
+
+    val isLiked = currentUserId.isNotEmpty() && currentUserId in post.likedBy
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            // ---- Avatar ----
+            if (post.authorAvatarUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = post.authorAvatarUrl,
+                    contentDescription = "Avatar",
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.SkillKnownBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(initials, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppColors.SkillKnownText)
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                // ---- Name + time + badge row ----
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(post.authorName, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppColors.TextPrimary)
+                    Spacer(Modifier.width(6.dp))
+                    Text("· ${timeAgo(post.timestamp)}", fontSize = 12.sp, color = AppColors.TextSecondary)
+
+                    if (post.postType == "query") {
+                        Spacer(Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFFEEEDFE))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Query", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color(0xFF3C3489))
+                        }
+                    } else if (post.intent.isNotEmpty()) {
+                        Spacer(Modifier.weight(1f))
+                        val isTeaching = post.intent == "teach"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(if (isTeaching) AppColors.SkillKnownBg else AppColors.SkillLearnBg)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                if (isTeaching) "Teaching" else "Learning",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isTeaching) AppColors.SkillKnownText else AppColors.SkillLearnText
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                if (post.heading.isNotEmpty()) {
+                    Text(
+                        text = post.heading,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextPrimary
+                    )
+                    Spacer(Modifier.height(2.dp))
+                }
+                Text(
+                    text = post.description,
+                    fontSize = 13.sp,
+                    color = AppColors.TextSecondary,
+                    lineHeight = 18.sp
+                )
+
+                if (post.postType == "image" && post.imageUrl.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    AsyncImage(
+                        model = post.imageUrl,
+                        contentDescription = "Post image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // ---- Engagement row: comment, like, share ----
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onCommentClick() }
+                    ) {
+                        Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comments", tint = AppColors.TextSecondary, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("${post.commentCount}", fontSize = 12.sp, color = AppColors.TextSecondary)
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onLikeClick() }
+                    ) {
+                        Icon(
+                            imageVector = if (isLiked) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = "Like",
+                            tint = if (isLiked) Color(0xFFE0245E) else AppColors.TextSecondary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("${post.likeCount}", fontSize = 12.sp, color = AppColors.TextSecondary)
+                    }
+                    Icon(Icons.Outlined.Share, contentDescription = "Share", tint = AppColors.TextSecondary, modifier = Modifier.size(15.dp))
+                }
+            }
+        }
+    }
+
+    HorizontalDivider(color = AppColors.Divider, thickness = 0.5.dp)
 }
 
 @Preview(showBackground = true)
@@ -233,29 +447,34 @@ fun FeedScreenPreview() {
         PeerSuggestion(id = "2", name = "John Doe", knowSkill = "Python, C++", matchPercentage = 80),
         PeerSuggestion(id = "3", name = "Jane Smith", knowSkill = "React, JS", matchPercentage = 70)
     )
+    val mockPosts = listOf(
+        Post(
+            id = "p1",
+            authorName = "Sahil Maske",
+            heading = "UI/UX Design",
+            description = "Can help with Figma basics and prototyping fundamentals.",
+            intent = "teach",
+            postType = "text",
+            likeCount = 12,
+            commentCount = 3,
+            timestamp = System.currentTimeMillis() - 2 * 60 * 60 * 1000
+        ),
+        Post(
+            id = "p2",
+            authorName = "Riya K.",
+            heading = "How do I center a div in CSS?",
+            description = "Tried flexbox but it's not working in my grid layout.",
+            postType = "query",
+            likeCount = 2,
+            commentCount = 5,
+            timestamp = System.currentTimeMillis() - 6 * 60 * 60 * 1000
+        )
+    )
     HomeScreenContent(
         userProfile = null,
         suggestions = mockSuggestions,
-        posts = emptyList(),
-        onSeeAllClick = {}
+        posts = mockPosts,
+        onSeeAllClick = {},
+        onPeerClick = {}
     )
-}
-
-@Composable
-fun PostCard(post: Post) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = post.authorName, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = post.heading, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = post.description)
-        }
-    }
 }

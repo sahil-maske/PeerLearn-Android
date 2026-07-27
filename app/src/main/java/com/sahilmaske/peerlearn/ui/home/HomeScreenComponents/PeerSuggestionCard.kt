@@ -52,6 +52,7 @@ private val DashedBorderColor = Color(0xFF6C7BFF)
 @Composable
 fun PeerSuggestionCard(
     peer: PeerSuggestion,
+    onPeerClick: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -67,6 +68,9 @@ fun PeerSuggestionCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
+                    .clickable {
+                        onPeerClick(peer.uid)   // ← poora card click karega, sirf avatar nahi
+                    }
                     .background(Color(0xFFF0F0F5)),
                 contentAlignment = Alignment.Center
             ) {
@@ -236,6 +240,7 @@ fun PeerSuggestionCardPreview() {
             knowSkill = "Python, UI Design",
             learnSkill = "Guitar",
             matchPercentage = 92
-        )
+        ),
+        onPeerClick = {}
     )
 }

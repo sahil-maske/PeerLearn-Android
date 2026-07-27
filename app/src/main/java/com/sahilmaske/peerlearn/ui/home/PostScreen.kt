@@ -48,11 +48,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,19 +67,24 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 
 // ==================== BOUNCING DOTS LOADER ====================
-// 3 dots jo staggered delay ke saath scale+fade animate hote hain — jaise
-// WhatsApp/iMessage ka "typing..." indicator. Har dot 150ms late shuru hota hai
-// apne pichle wale se, isliye ek "wave" jaisa effect banta hai.
 @Composable
 fun BouncingDotsLoader(
     modifier: Modifier = Modifier,
@@ -122,10 +131,61 @@ fun BouncingDotsLoader(
     }
 }
 
+// ==================== CLOUDINARY IMAGE UPLOAD ====================
+suspend fun uploadImageToCloudinary(context: android.content.Context, uri: Uri): String {
+    return suspendCancellableCoroutine { continuation ->
+        val cloudName = "db7wneko6"
+        val uploadPreset = "peerlearn_avatar"
+
+        try {
+            val stream = context.contentResolver.openInputStream(uri)
+            val bytes = stream?.readBytes()
+            stream?.close()
+
+            if (bytes == null) {
+                continuation.resumeWith(Result.success(""))
+                return@suspendCancellableCoroutine
+            }
+
+            Thread {
+                try {
+                    val url = java.net.URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
+                    val boundary = "Boundary-${System.currentTimeMillis()}"
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.requestMethod = "POST"
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+
+                    val output = connection.outputStream
+                    output.write("--$boundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$uploadPreset\r\n".toByteArray())
+                    output.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"post.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
+                    output.write(bytes)
+                    output.write("\r\n--$boundary--\r\n".toByteArray())
+                    output.flush()
+
+                    val response = connection.inputStream.bufferedReader().readText()
+                    val imageUrl = org.json.JSONObject(response).getString("secure_url")
+                    continuation.resumeWith(Result.success(imageUrl))
+                } catch (e: Exception) {
+                    continuation.resumeWith(Result.success(""))
+                }
+            }.start()
+        } catch (e: Exception) {
+            continuation.resumeWith(Result.success(""))
+        }
+    }
+}
+
 @Composable
 fun PostScreen(
-    onClose: () -> Unit = {}
+    onClose: () -> Unit = {},
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val userProfile by profileViewModel.userProfile.collectAsState()
 
     var selectedIntent by remember { mutableStateOf("teach") }
     var skill by remember { mutableStateOf("") }
@@ -138,33 +198,28 @@ fun PostScreen(
         selectedImageUri = uri
     }
 
-    // BoxWithConstraints: poori screen ki actual width pata karne ke liye,
-    // taaki tablet vs phone ke hisaab se layout adjust ho sake.
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Screen 600dp se chaudi hai matlab tablet/foldable — horizontal padding zyada,
-        // chhoti hai (phone) to kam padding — content edge tak use hota hai.
         val isTablet = maxWidth >= 600.dp
         val horizontalPadding = if (isTablet) 32.dp else 16.dp
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()      // notch/status bar ke peeche content chipakne se bachata hai
-                .navigationBarsPadding()  // bottom gesture bar ke peeche se bachata hai
-                .imePadding()             // keyboard khulne pe content upar push hota hai
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = horizontalPadding, vertical = 16.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // ==================== TOP BAR ====================
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .widthIn(max = 480.dp) // tablet pe form bahut chauda na ho, cap laga di
+                        .widthIn(max = 480.dp)
                         .background(
                             color = AppColors.Surface.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp)
@@ -172,9 +227,7 @@ fun PostScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(
-                        onClick = {
-                            onClose()
-                        },
+                        onClick = { onClose() },
                         modifier = Modifier.align(Alignment.CenterStart)
                     ) {
                         Icon(
@@ -205,7 +258,6 @@ fun PostScreen(
                 }
             }
 
-            // ==================== HEADING + SUBTITLE + INTENT LABEL ====================
             item {
                 Column(
                     modifier = Modifier
@@ -243,7 +295,6 @@ fun PostScreen(
                 }
             }
 
-            // ==================== INTENT TOGGLE ====================
             item {
                 Column(
                     modifier = Modifier
@@ -314,7 +365,6 @@ fun PostScreen(
                 }
             }
 
-            // ==================== SKILL FIELD ====================
             item {
                 Column(
                     modifier = Modifier
@@ -352,7 +402,6 @@ fun PostScreen(
                 }
             }
 
-            // ==================== DESCRIPTION FIELD ====================
             item {
                 Column(
                     modifier = Modifier
@@ -395,7 +444,6 @@ fun PostScreen(
                 }
             }
 
-            // ==================== PHOTO ADD/DROP TILE ====================
             item {
                 Column(
                     modifier = Modifier
@@ -506,7 +554,6 @@ fun PostScreen(
                 }
             }
 
-            // ==================== POST BUTTON ====================
             item {
                 Column(
                     modifier = Modifier
@@ -520,8 +567,50 @@ fun PostScreen(
 
                     Button(
                         onClick = {
-                            isPosting = true
-                            // TODO: yahan actual Firebase/Firestore post-upload logic aayega
+                            coroutineScope.launch {
+                                isPosting = true
+                                try {
+                                    val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+                                    if (uid != null) {
+                                        var uploadedImageUrl = ""
+                                        if (selectedImageUri != null) {
+                                            uploadedImageUrl = uploadImageToCloudinary(context, selectedImageUri!!)
+                                        }
+
+                                        val newPost = hashMapOf(
+                                            "authorId" to uid,
+                                            "authorName" to (userProfile?.name ?: "Anonymous"),
+                                            "authorAvatarUrl" to (userProfile?.avatarUrl ?: ""),
+                                            "heading" to skill,
+                                            "description" to description,
+                                            "intent" to selectedIntent,
+                                            "postType" to if (selectedImageUri != null) "image" else "text",
+                                            "imageUrl" to uploadedImageUrl,
+                                            "likeCount" to 0,
+                                            "commentCount" to 0,
+                                            "timestamp" to System.currentTimeMillis()
+                                        )
+
+                                        FirebaseFirestore.getInstance()
+                                            .collection("posts")
+                                            .add(newPost)
+                                            .await()
+                                    }
+
+                                    isPosting = false
+                                    skill = ""
+                                    description = ""
+                                    selectedImageUri = null
+                                    selectedIntent = "teach"
+
+                                    snackbarHostState.showSnackbar("Post shared successfully!")
+                                    onClose()
+                                } catch (e: Exception) {
+                                    isPosting = false
+                                    snackbarHostState.showSnackbar("Failed to post: ${e.message}")
+                                }
+                            }
                         },
                         enabled = isFormValid && !isPosting,
                         modifier = Modifier
@@ -565,6 +654,11 @@ fun PostScreen(
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
