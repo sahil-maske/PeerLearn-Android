@@ -50,6 +50,16 @@ class ProfileViewModel : ViewModel() {
             }
     }
 
+
+    fun listenUserProfile(uid: String) {
+        db.collection("users").document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                _userProfile.value = snapshot.toObject(User::class.java)
+            }
+    }
+
+
     fun loadProfile(uid: String?) {
         val targetUid = uid ?: auth.currentUser?.uid
         android.util.Log.d("ProfileDebug", "loadProfile called. targetUid: $targetUid")

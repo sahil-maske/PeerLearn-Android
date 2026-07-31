@@ -54,6 +54,7 @@ import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.ui.components.SlideToSwapButton
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 import kotlin.math.max
@@ -63,7 +64,9 @@ import kotlin.math.min
 @Composable
 fun ProfileScreen(
     uid: String? = null,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = viewModel(),
+    connectionViewModel: ConnectionViewModel = viewModel(),
+    onNavigateToChat: (String) -> Unit = {}
 ) {
     // ---- State & Data ----
     val userProfileFromVM by viewModel.userProfile.collectAsState()
@@ -99,6 +102,16 @@ fun ProfileScreen(
 
     val currentUserUid = if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid
     val isOwnProfile = uid == null || uid == currentUserUid
+
+    // ---- Connection state (only relevant for other users' profiles) ----
+    val connectionStatus by connectionViewModel.connectionStatus.collectAsState()
+
+    LaunchedEffect(uid, currentUserUid) {
+        if (isPreview || isOwnProfile) return@LaunchedEffect
+        val targetUid = uid ?: return@LaunchedEffect
+        val myUid = currentUserUid ?: return@LaunchedEffect
+        connectionViewModel.listenConnectionStatus(myUid, targetUid)
+    }
 
     // ---- Responsive sizing (compatible across all mobile widths) ----
     val configuration = LocalConfiguration.current
@@ -433,7 +446,7 @@ fun ProfileScreen(
             Spacer(Modifier.height(12.dp))
         }
 
-        // ---- Edit Profile (own profile) OR Request Swap (other user's profile) ----
+        // ---- Edit Profile (own profile) OR Connect/Pending/Message (other user's profile) ----
         item {
             if (isOwnProfile) {
                 OutlinedButton(
@@ -451,12 +464,52 @@ fun ProfileScreen(
                     Text("Edit Profile", fontWeight = FontWeight.Medium, color = AppColors.Primary)
                 }
             } else {
-                SlideToSwapButton(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = horizontalPadding),
-                    onConfirmed = { /* TODO: fire actual swap-request Firestore call here */ }
-                )
+                when (connectionStatus) {
+                    "accepted" -> {
+                        Button(
+                            onClick = {
+                                val myUid = currentUserUid ?: return@Button
+                                val targetUid = uid ?: return@Button
+                                val chatId = listOf(myUid, targetUid).sorted().joinToString("_")
+                                onNavigateToChat(chatId)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = horizontalPadding)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
+                        ) {
+                            Text("Message", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
+                        }
+                    }
+                    "pending" -> {
+                        Button(
+                            onClick = {},
+                            enabled = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = horizontalPadding)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text("Request Pending", fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    else -> {
+                        // null or "rejected" -> allow sending a fresh connection request
+                        SlideToSwapButton(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = horizontalPadding),
+                            onConfirmed = {
+                                val myUid = currentUserUid ?: return@SlideToSwapButton
+                                val targetUid = uid ?: return@SlideToSwapButton
+                                connectionViewModel.sendConnectionRequest(myUid, targetUid)
+                            }
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(16.dp))
         }
