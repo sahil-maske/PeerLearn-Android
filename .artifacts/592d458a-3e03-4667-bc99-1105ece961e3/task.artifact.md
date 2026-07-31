@@ -1,0 +1,4 @@
+- [x] Register `"notifications"` route in `MainActivity.kt`
+    - [x] Import `NotificationScreen`
+    - [x] Add `composable("notifications")` to `NavHost`
+- [ ] Verify fix by building and checking navigation logic

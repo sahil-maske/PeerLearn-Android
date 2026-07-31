@@ -1,22 +1,19 @@
-# Implementation Plan - Fix Unresolved reference 'Conversations' in ChatScreen
+# Implementation Plan - Add Composables to Notifications Screen
 
-The `ChatScreen` component is currently failing to build because it references an unresolved symbol `Conversations` (and potentially a typo `Conver3sations` reported by the user). The project already has a `ChatViewModel` that contains the necessary mock data, but it's not being used in `ChatScreen`.
+The user wants to add a composable to the `NotificationScreen`. Based on the current implementation, adding a Preview and an Empty State placeholder would be highly beneficial for development and user experience.
 
 ## Proposed Changes
 
-### [Component Name]
+### [Notifications Component]
 
-#### [MODIFY] [ChatScreen.kt](file:///D:/PeerLearn2/app/src/main/java/com/sahilmaske/peerlearn/ui/home/ChatScreen.kt)
-- Update the `ChatScreen` composable to accept a `ChatViewModel`.
-- Collect the `conversations` state from the ViewModel.
-- Replace the unresolved `Conversations` (or `Conver3sations`) reference with the collected state.
-- Remove the unused `android.provider.Telephony` import.
-- Clean up any unused parameters.
+#### [MODIFY] [Notifications.kt](file:///D:/PeerLearn2/app/src/main/java/com/sahilmaske/peerlearn/ui/notify/Notifications.kt)
+- Add an `EmptyNotificationPlaceholder` composable to handle cases with no notifications.
+- Integrate the `EmptyNotificationPlaceholder` into `NotificationScreen`.
+- Add a `@Preview` for `NotificationScreen` with mock data.
+- Add a `@Preview` for `NotificationRow` to visualize different notification types.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `./gradlew :app:compileDebugKotlin` to verify the build error is resolved.
-
 ### Manual Verification
-- Render the `ChatScreenPreview` using the `render_compose_preview` tool to ensure the UI still looks correct with the data from the ViewModel.
+- Render the `NotificationScreenPreview` using the `render_compose_preview` tool.
+- Render the `NotificationRowPreview` to verify icon and button styles.

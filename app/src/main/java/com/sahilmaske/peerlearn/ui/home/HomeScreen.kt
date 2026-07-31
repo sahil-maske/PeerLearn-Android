@@ -86,6 +86,9 @@ fun HomeScreen(
         onPeerClick = { uid ->
             navController.navigate("profile/$uid")
         },
+        onNotificationClick = {
+            navController.navigate("notifications")
+        },
         viewModel = viewModel
     )
 }
@@ -99,6 +102,7 @@ fun HomeScreenContent(
     currentUserId: String,
     onSeeAllClick: () -> Unit,
     onPeerClick: (String) -> Unit,
+    onNotificationClick: () -> Unit,
     viewModel: FeedViewModel? = null
 ) {
     // ---- Comments bottom sheet state ----
@@ -144,7 +148,7 @@ fun HomeScreenContent(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { /* navigate to notifications */ }) {
+                IconButton(onClick = onNotificationClick) {
                     Icon(
                         Icons.Outlined.Notifications,
                         contentDescription = "Notifications",
@@ -477,6 +481,7 @@ fun FeedScreenPreview() {
         posts = mockPosts,
         currentUserId = "mock_user_id",
         onSeeAllClick = {},
-        onPeerClick = {}
+        onPeerClick = {},
+        onNotificationClick = {}
     )
 }
