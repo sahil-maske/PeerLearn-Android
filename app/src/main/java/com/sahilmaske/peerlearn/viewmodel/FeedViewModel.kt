@@ -24,8 +24,8 @@ class FeedViewModel(
     private val profileViewModel: ProfileViewModel
 ) : ViewModel() {
 
-    private val db = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+    private val db by lazy { FirebaseFirestore.getInstance() }
+    private val auth by lazy { FirebaseAuth.getInstance() }
 
     companion object {
         fun provideFactory(profileViewModel: ProfileViewModel): ViewModelProvider.Factory =
@@ -55,8 +55,13 @@ class FeedViewModel(
     val comments: StateFlow<List<Comment>> = _comments
 
     init {
-        loadPosts()
-        loadSuggestedPeers()
+        try {
+            loadPosts()
+            loadSuggestedPeers()
+        } catch (e: Exception) {
+            // This is expected in Compose Preview environments where Firebase is not initialized
+            android.util.Log.w("FeedViewModel", "Firebase initialization skipped in preview/test: ${e.message}")
+        }
     }
 
     // Real-time listener — jaise hi Firestore "posts" collection mein naya document

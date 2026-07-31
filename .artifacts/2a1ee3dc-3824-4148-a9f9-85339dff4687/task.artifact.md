@@ -1,0 +1,6 @@
+- [x] Integrate `ChatViewModel` into `ChatScreen`
+- [x] Collect `conversations` state in `ChatScreen`
+- [x] Fix unresolved reference `Conversations` (and typo `Conver3sations`)
+- [x] Remove unused `Telephony` import
+- [x] Verify fix by compiling
+- [x] Verify UI with Compose Preview

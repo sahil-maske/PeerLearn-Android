@@ -86,6 +86,16 @@ class MainActivity : ComponentActivity() {
                         SeeAllPeersScreen(navController = navController)
                     }
                     composable(
+                        route = "chat_conversation/{chatId}",
+                        arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
+                        com.sahilmaske.peerlearn.ui.home.ChatConversationScreen(
+                            chatId = chatId,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
                         route = "profile/{uid}",
                         arguments = listOf(navArgument("uid") { type = NavType.StringType })
                     ) { backStackEntry ->

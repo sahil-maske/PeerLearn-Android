@@ -68,7 +68,8 @@ fun HomeScreen(
     profileViewModel: ProfileViewModel = viewModel(),
     viewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
-    )
+    ),
+    currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 ) {
     val suggestions by viewModel.suggestions.collectAsState()
     val posts by viewModel.posts.collectAsState()
@@ -78,6 +79,7 @@ fun HomeScreen(
         userProfile = userProfile,
         suggestions = suggestions,
         posts = posts,
+        currentUserId = currentUserId,
         onSeeAllClick = {
             navController.navigate("see_all_peers")
         },
@@ -94,12 +96,11 @@ fun HomeScreenContent(
     userProfile: User?,
     suggestions: List<PeerSuggestion>,
     posts: List<Post>,
+    currentUserId: String,
     onSeeAllClick: () -> Unit,
     onPeerClick: (String) -> Unit,
     viewModel: FeedViewModel? = null
 ) {
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-
     // ---- Comments bottom sheet state ----
     var activeCommentsPostId by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
@@ -474,6 +475,7 @@ fun FeedScreenPreview() {
         userProfile = null,
         suggestions = mockSuggestions,
         posts = mockPosts,
+        currentUserId = "mock_user_id",
         onSeeAllClick = {},
         onPeerClick = {}
     )

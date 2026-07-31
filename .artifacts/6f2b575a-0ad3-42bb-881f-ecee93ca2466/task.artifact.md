@@ -1,0 +1,4 @@
+- `[x]` Fix `ChatScreen` parameter mismatch in `ChatScreen.kt`
+- `[x]` Create `ChatConversationScreen` placeholder
+- `[x]` Fix `MainActivity.kt` navigation structure and typo
+- `[x]` Verify build

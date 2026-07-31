@@ -68,6 +68,8 @@ fun NaviScreen(
     val userProfile by profileViewModel.userProfile.collectAsState()
 
     val isPreview = LocalInspectionMode.current
+    val currentUserId = if (isPreview) "mock_user" else FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
     LaunchedEffect(Unit) {
         if (isPreview) return@LaunchedEffect
         val uid = FirebaseAuth.getInstance().currentUser?.uid
@@ -115,11 +117,11 @@ fun NaviScreen(
             modifier = Modifier.fillMaxSize()
         ) { screen ->
             when (screen) {
-                0 -> HomeScreen(viewModel = feedViewModel, navController = navController)
+                0 -> HomeScreen(viewModel = feedViewModel, navController = navController, currentUserId = currentUserId)
                 1 -> PostScreen(
                     onClose = { selectedItem = 0 }
                 )
-                2 -> ChatScreen()
+                2 -> ChatScreen(navController = navController)
                 3 -> ProfileScreen(viewModel = profileViewModel)
             }
         }
