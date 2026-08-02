@@ -7,5 +7,6 @@ data class Comment(
     val authorName: String = "",
     val authorAvatarUrl: String = "",
     val text: String = "",
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isMarkedHelpful: Boolean = false // NEW: set true when the post owner marks this comment as having helped them
 )
