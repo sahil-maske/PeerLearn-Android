@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,13 +31,55 @@ fun NotificationScreen(
     connectionViewModel: ConnectionViewModel = viewModel(),
     onNavigateToHome: () -> Unit = {}
 ) {
-    val myUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+    val myUid = try {
+        FirebaseAuth.getInstance().currentUser?.uid
+    } catch (e: Exception) {
+        null
+    } ?: return
+
     val incomingRequests by connectionViewModel.incomingRequests.collectAsState()
+    val senderNames by connectionViewModel.senderNames.collectAsState()
 
     LaunchedEffect(myUid) {
         connectionViewModel.listenIncomingRequests(myUid)
     }
 
+    // Whenever the incoming requests list changes, fetch names for any senders we don't have yet
+    LaunchedEffect(incomingRequests) {
+        if (incomingRequests.isNotEmpty()) {
+            connectionViewModel.fetchSenderNames(incomingRequests.map { it.userA })
+        }
+    }
+
+    NotificationContent(
+        incomingRequests = incomingRequests,
+        senderNames = senderNames,
+        onAccept = { request ->
+            connectionViewModel.respondToConnection(
+                connectionId = request.connectionId,
+                accept = true,
+                userA = request.userA,
+                userB = request.userB
+            )
+        },
+        onDeny = { request ->
+            connectionViewModel.respondToConnection(
+                connectionId = request.connectionId,
+                accept = false,
+                userA = request.userA,
+                userB = request.userB
+            )
+        }
+    )
+}
+
+@Composable
+fun NotificationContent(
+    incomingRequests: List<Connection>,
+    senderNames: Map<String, String>,
+    onAccept: (Connection) -> Unit,
+    onDeny: (Connection) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -72,27 +115,39 @@ fun NotificationScreen(
                 items(incomingRequests, key = { it.connectionId }) { request ->
                     ConnectionRequestCard(
                         request = request,
-                        onAccept = {
-                            connectionViewModel.respondToConnection(
-                                connectionId = request.connectionId,
-                                accept = true,
-                                userA = request.userA,
-                                userB = request.userB
-                            )
-                        },
-                        onDeny = {
-                            connectionViewModel.respondToConnection(
-                                connectionId = request.connectionId,
-                                accept = false,
-                                userA = request.userA,
-                                userB = request.userB
-                            )
-                        }
+                        senderName = senderNames[request.userA],
+                        onAccept = { onAccept(request) },
+                        onDeny = { onDeny(request) }
                     )
                 }
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun NotificationScreenPreview() {
+    val mockRequests = listOf(
+        Connection(
+            connectionId = "1",
+            userA = "user1",
+            userB = "user2",
+            status = "pending"
+        ),
+        Connection(
+            connectionId = "2",
+            userA = "user3",
+            userB = "user2",
+            status = "pending"
+        )
+    )
+    NotificationContent(
+        incomingRequests = mockRequests,
+        senderNames = mapOf("user1" to "Aditi Sharma"),
+        onAccept = {},
+        onDeny = {}
+    )
 }
 
 // ---- Empty State ----
@@ -140,6 +195,7 @@ fun EmptyNotificationsState() {
 @Composable
 fun ConnectionRequestCard(
     request: Connection,
+    senderName: String?,
     onAccept: () -> Unit,
     onDeny: () -> Unit
 ) {
@@ -175,7 +231,8 @@ fun ConnectionRequestCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "New request from user", // TODO: replace with fetched name
+                        // Shows a loading placeholder briefly until the name is fetched
+                        senderName?.let { "$it wants to connect" } ?: "Loading request…",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.TextPrimary

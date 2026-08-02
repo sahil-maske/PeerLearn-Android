@@ -3,6 +3,7 @@ package com.sahilmaske.peerlearn.ui.home
 import android.net.Uri
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -97,6 +98,7 @@ fun ProfileScreen(
         if (isPreview) return@LaunchedEffect
         val targetUid = uid ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
         viewModel.fetchUserProfile(targetUid)
+        viewModel.listenPostCount(targetUid) // NEW: real-time count from actual posts, not a stale counter field
     }
 
 
@@ -106,11 +108,26 @@ fun ProfileScreen(
     // ---- Connection state (only relevant for other users' profiles) ----
     val connectionStatus by connectionViewModel.connectionStatus.collectAsState()
 
+    // NEW: live post count from the real posts collection (see ProfileViewModel.listenPostCount)
+    val postCount by viewModel.postCount.collectAsState()
+
+    // NEW: local flag for instant "Request Sent" feedback right after swipe,
+    // before the Firestore listener catches up and connectionStatus becomes "pending"
+    var justSentRequest by remember { mutableStateOf(false) }
+
     LaunchedEffect(uid, currentUserUid) {
         if (isPreview || isOwnProfile) return@LaunchedEffect
         val targetUid = uid ?: return@LaunchedEffect
         val myUid = currentUserUid ?: return@LaunchedEffect
         connectionViewModel.listenConnectionStatus(myUid, targetUid)
+    }
+
+    // Once the real listener confirms "pending" (or beyond), drop the temporary flag
+    // so the permanent "Request Pending" / "Message" state takes over cleanly.
+    LaunchedEffect(connectionStatus) {
+        if (connectionStatus == "pending" || connectionStatus == "accepted") {
+            justSentRequest = false
+        }
     }
 
     // ---- Responsive sizing (compatible across all mobile widths) ----
@@ -428,7 +445,7 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text((userProfile?.postCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        Text(postCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                         Text("Post", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
                     VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)
@@ -464,8 +481,8 @@ fun ProfileScreen(
                     Text("Edit Profile", fontWeight = FontWeight.Medium, color = AppColors.Primary)
                 }
             } else {
-                when (connectionStatus) {
-                    "accepted" -> {
+                when {
+                    connectionStatus == "accepted" -> {
                         Button(
                             onClick = {
                                 val myUid = currentUserUid ?: return@Button
@@ -483,7 +500,7 @@ fun ProfileScreen(
                             Text("Message", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
                         }
                     }
-                    "pending" -> {
+                    connectionStatus == "pending" -> {
                         Button(
                             onClick = {},
                             enabled = false,
@@ -496,6 +513,32 @@ fun ProfileScreen(
                             Text("Request Pending", fontWeight = FontWeight.Medium)
                         }
                     }
+                    // NEW: instant confirmation right after swipe, while listener hasn't
+                    // caught up to "pending" yet
+                    justSentRequest -> {
+                        Button(
+                            onClick = {},
+                            enabled = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = horizontalPadding)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF0F6E6E),
+                                disabledContainerColor = Color(0xFF0F6E6E)
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = AppColors.TextWhite,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Request Sent", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
+                        }
+                    }
                     else -> {
                         // null or "rejected" -> allow sending a fresh connection request
                         SlideToSwapButton(
@@ -505,7 +548,21 @@ fun ProfileScreen(
                             onConfirmed = {
                                 val myUid = currentUserUid ?: return@SlideToSwapButton
                                 val targetUid = uid ?: return@SlideToSwapButton
-                                connectionViewModel.sendConnectionRequest(myUid, targetUid)
+                                connectionViewModel.sendConnectionRequest(
+                                    currentUserId = myUid,
+                                    targetUserId = targetUid,
+                                    onSuccess = {
+                                        // Only show "Request Sent" once Firestore actually confirms the write
+                                        justSentRequest = true
+                                    },
+                                    onFailure = { e ->
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Couldn't send request: ${e.localizedMessage ?: "check your connection"}",
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                )
                             }
                         )
                     }

@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
+import com.sahilmaske.peerlearn.ui.notifications.NotificationScreen
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -57,11 +58,14 @@ fun NaviScreen(
     )
 ) {
     var selectedItem by remember { mutableIntStateOf(0) }
-    val items = listOf("Home", "Post", "Chat", "Profile")
+    // NEW: added "Alerts" tab (index 3) so NotificationScreen is actually reachable.
+    // It was fully built but never wired into navigation before this.
+    val items = listOf("Home", "Post", "Chat", "Alerts", "Profile")
     val icons = listOf(
         Icons.Default.Home,
         Icons.Default.PostAdd,
         Icons.AutoMirrored.Filled.Chat,
+        Icons.Default.Notifications,
         Icons.Default.Person
     )
 
@@ -122,7 +126,8 @@ fun NaviScreen(
                     onClose = { selectedItem = 0 }
                 )
                 2 -> ChatScreen(navController = navController)
-                3 -> ProfileScreen(viewModel = profileViewModel)
+                3 -> NotificationScreen()
+                4 -> ProfileScreen(viewModel = profileViewModel)
             }
         }
 
@@ -252,11 +257,12 @@ fun AnimatedBottomNavPreview() {
             .padding(24.dp)
     ) {
         AnimatedBottomNav(
-            items = listOf("Home", "Post", "Chat", "Profile"),
+            items = listOf("Home", "Post", "Chat", "Alerts", "Profile"),
             icons = listOf(
                 Icons.Default.Home,
                 Icons.Rounded.AddCircle,
                 Icons.AutoMirrored.Filled.Chat,
+                Icons.Default.Notifications,
                 Icons.Default.Person
             ),
             selectedItem = selected,

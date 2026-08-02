@@ -1,6 +1,6 @@
 package com.sahilmaske.peerlearn.viewmodel
 
-
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 class ConnectionViewModel : ViewModel() {
 
-    private val db = FirebaseFirestore.getInstance()
+    private val db by lazy { FirebaseFirestore.getInstance() }
 
     // ---------- STATE ----------
 
@@ -27,6 +27,12 @@ class ConnectionViewModel : ViewModel() {
 
     private val _swapRequests = MutableStateFlow<List<SwapRequest>>(emptyList())
     val swapRequests: StateFlow<List<SwapRequest>> = _swapRequests.asStateFlow()
+
+    // NEW: uid -> display name, used to show real sender name on NotificationScreen
+    // Assumes users/{uid} document has a "name" field. Change getString("name")
+    // below if your field is called something else (e.g. "fullName", "username").
+    private val _senderNames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val senderNames: StateFlow<Map<String, String>> = _senderNames.asStateFlow()
 
     private var connectionListener: ListenerRegistration? = null
     private var incomingListener: ListenerRegistration? = null
@@ -41,7 +47,12 @@ class ConnectionViewModel : ViewModel() {
 
     // ---------- CONNECTION REQUESTS ----------
 
-    fun sendConnectionRequest(currentUserId: String, targetUserId: String) {
+    fun sendConnectionRequest(
+        currentUserId: String,
+        targetUserId: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
         val connectionId = buildConnectionId(currentUserId, targetUserId)
         val data = hashMapOf(
             "connectionId" to connectionId,
@@ -55,19 +66,44 @@ class ConnectionViewModel : ViewModel() {
         db.collection("connections")
             .document(connectionId)
             .set(data)
+            .addOnSuccessListener {
+                Log.d("ConnectionVM", "Request sent successfully: $connectionId")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.e("ConnectionVM", "Failed to send request: $connectionId", e)
+                onFailure(e)
+            }
     }
 
-    fun respondToConnection(connectionId: String, accept: Boolean) {
+    // Accept/deny an incoming request. On accept, increments connection count on both users.
+    fun respondToConnection(connectionId: String, accept: Boolean, userA: String, userB: String) {
         val newStatus = if (accept) "accepted" else "rejected"
+
         db.collection("connections")
             .document(connectionId)
             .update("status", newStatus)
+            .addOnSuccessListener {
+                if (accept) {
+                    val usersRef = db.collection("users")
+                    usersRef.document(userA).update("connection", FieldValue.increment(1))
+                    usersRef.document(userB).update("connection", FieldValue.increment(1))
+                }
+            }
     }
 
-    fun cancelOrRemoveConnection(connectionId: String) {
+    // Remove/cancel a connection. Decrements connection count on both users if it was accepted.
+    fun cancelOrRemoveConnection(connectionId: String, userA: String, userB: String, wasAccepted: Boolean) {
         db.collection("connections")
             .document(connectionId)
             .delete()
+            .addOnSuccessListener {
+                if (wasAccepted) {
+                    val usersRef = db.collection("users")
+                    usersRef.document(userA).update("connection", FieldValue.increment(-1))
+                    usersRef.document(userB).update("connection", FieldValue.increment(-1))
+                }
+            }
     }
 
     // Real-time listener: use this on ProfileScreen to show Connect/Pending/Message button
@@ -86,7 +122,7 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // Real-time listener: use this on RequestsScreen to show incoming pending requests
+    // Real-time listener: use this on NotificationScreen to show incoming pending requests
     fun listenIncomingRequests(currentUserId: String) {
         incomingListener?.remove()
 
@@ -101,6 +137,24 @@ class ConnectionViewModel : ViewModel() {
                 }
                 _incomingRequests.value = list
             }
+    }
+
+    // NEW: fetch display names for a list of sender uids, skips ones already cached.
+    // Call this whenever incomingRequests updates (see NotificationScreen).
+    fun fetchSenderNames(uids: List<String>) {
+        val missing = uids.filter { it.isNotBlank() && it !in _senderNames.value.keys }
+        if (missing.isEmpty()) return
+
+        missing.forEach { uid ->
+            db.collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    val name = doc.getString("name") ?: "Unknown User"
+                    _senderNames.value = _senderNames.value + (uid to name)
+                }
+                .addOnFailureListener {
+                    _senderNames.value = _senderNames.value + (uid to "Unknown User")
+                }
+        }
     }
 
     // ---------- SWAP REQUESTS ----------
@@ -147,35 +201,6 @@ class ConnectionViewModel : ViewModel() {
                     doc.toObject(SwapRequest::class.java)
                 }
                 _swapRequests.value = list
-            }
-    }
-
-    fun respondToConnection(connectionId: String, accept: Boolean, userA: String, userB: String) {
-        val newStatus = if (accept) "accepted" else "rejected"
-
-        db.collection("connections")
-            .document(connectionId)
-            .update("status", newStatus)
-            .addOnSuccessListener {
-                if (accept) {
-                    // Increment connection count on BOTH users when accepted
-                    val usersRef = db.collection("users")
-                    usersRef.document(userA).update("connection", FieldValue.increment(1))
-                    usersRef.document(userB).update("connection", FieldValue.increment(1))
-                }
-            }
-    }
-
-    fun cancelOrRemoveConnection(connectionId: String, userA: String, userB: String, wasAccepted: Boolean) {
-        db.collection("connections")
-            .document(connectionId)
-            .delete()
-            .addOnSuccessListener {
-                if (wasAccepted) {
-                    val usersRef = db.collection("users")
-                    usersRef.document(userA).update("connection", FieldValue.increment(-1))
-                    usersRef.document(userB).update("connection", FieldValue.increment(-1))
-                }
             }
     }
 

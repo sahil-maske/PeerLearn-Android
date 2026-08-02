@@ -57,7 +57,7 @@ fun SlideToSwapButton(
         with(density) { trackWidthPx - thumbSize.toPx() - 8f } // 8f = thumb inset padding
     }
 
-    // Progress 0f..1f based on how far thumb has been dragged
+    // Progress 0f..1f based on how far thumb has been dragged (used for visual fade only)
     val progress = if (maxOffsetPx > 0) (thumbOffset.value / maxOffsetPx).coerceIn(0f, 1f) else 0f
 
     Box(
@@ -113,7 +113,16 @@ fun SlideToSwapButton(
                     detectDragGestures(
                         onDragEnd = {
                             coroutineScope.launch {
-                                if (progress >= 0.85f) {
+                                // IMPORTANT: recompute progress here using the live thumbOffset.value.
+                                // The outer `progress` val is captured once when this gesture lambda
+                                // was first set up (pointerInput only restarts if trackWidthPx changes),
+                                // so it stays stuck at its initial value (0f) and onConfirmed() would
+                                // never fire no matter how far the user actually drags.
+                                val liveProgress = if (maxOffsetPx > 0)
+                                    (thumbOffset.value / maxOffsetPx).coerceIn(0f, 1f)
+                                else 0f
+
+                                if (liveProgress >= 0.85f) {
                                     // Snap to end, mark confirmed, fire callback
                                     thumbOffset.animateTo(maxOffsetPx, animationSpec = tween(150))
                                     confirmed = true
