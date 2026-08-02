@@ -34,9 +34,20 @@ class ConnectionViewModel : ViewModel() {
     private val _senderNames = MutableStateFlow<Map<String, String>>(emptyMap())
     val senderNames: StateFlow<Map<String, String>> = _senderNames.asStateFlow()
 
+    // NEW: live connection count, calculated from the actual "connections" collection
+    // instead of a manually incremented field — so old/pre-existing accepted
+    // connections are counted correctly too, and it self-corrects if a connection
+    // is ever removed.
+    private val _connectionCount = MutableStateFlow(0)
+    val connectionCount: StateFlow<Int> = _connectionCount.asStateFlow()
+    private var countAsUserA = 0
+    private var countAsUserB = 0
+
     private var connectionListener: ListenerRegistration? = null
     private var incomingListener: ListenerRegistration? = null
     private var swapListener: ListenerRegistration? = null
+    private var connectionCountListenerA: ListenerRegistration? = null
+    private var connectionCountListenerB: ListenerRegistration? = null
 
     // ---------- HELPER ----------
 
@@ -76,33 +87,45 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // Accept/deny an incoming request. On accept, increments connection count on both users.
+    // Accept/deny an incoming request.
     fun respondToConnection(connectionId: String, accept: Boolean, userA: String, userB: String) {
         val newStatus = if (accept) "accepted" else "rejected"
 
         db.collection("connections")
             .document(connectionId)
             .update("status", newStatus)
-            .addOnSuccessListener {
-                if (accept) {
-                    val usersRef = db.collection("users")
-                    usersRef.document(userA).update("connection", FieldValue.increment(1))
-                    usersRef.document(userB).update("connection", FieldValue.increment(1))
-                }
-            }
     }
 
-    // Remove/cancel a connection. Decrements connection count on both users if it was accepted.
+    // Remove/cancel a connection.
     fun cancelOrRemoveConnection(connectionId: String, userA: String, userB: String, wasAccepted: Boolean) {
         db.collection("connections")
             .document(connectionId)
             .delete()
-            .addOnSuccessListener {
-                if (wasAccepted) {
-                    val usersRef = db.collection("users")
-                    usersRef.document(userA).update("connection", FieldValue.increment(-1))
-                    usersRef.document(userB).update("connection", FieldValue.increment(-1))
-                }
+    }
+
+    // NEW: call this for whichever uid's profile is being shown (own or someone else's).
+    // A connection can have this user as either userA or userB, so we need two
+    // listeners whose counts get summed together live.
+    fun listenConnectionCount(uid: String) {
+        connectionCountListenerA?.remove()
+        connectionCountListenerB?.remove()
+
+        connectionCountListenerA = db.collection("connections")
+            .whereEqualTo("userA", uid)
+            .whereEqualTo("status", "accepted")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                countAsUserA = snapshot.size()
+                _connectionCount.value = countAsUserA + countAsUserB
+            }
+
+        connectionCountListenerB = db.collection("connections")
+            .whereEqualTo("userB", uid)
+            .whereEqualTo("status", "accepted")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                countAsUserB = snapshot.size()
+                _connectionCount.value = countAsUserA + countAsUserB
             }
     }
 
@@ -211,5 +234,7 @@ class ConnectionViewModel : ViewModel() {
         connectionListener?.remove()
         incomingListener?.remove()
         swapListener?.remove()
+        connectionCountListenerA?.remove()
+        connectionCountListenerB?.remove()
     }
 }

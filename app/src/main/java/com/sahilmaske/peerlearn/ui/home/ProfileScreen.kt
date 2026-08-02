@@ -111,13 +111,19 @@ fun ProfileScreen(
     // NEW: live post count from the real posts collection (see ProfileViewModel.listenPostCount)
     val postCount by viewModel.postCount.collectAsState()
 
+    // NEW: live connection count from the real connections collection
+    val connectionCount by connectionViewModel.connectionCount.collectAsState()
+
     // NEW: local flag for instant "Request Sent" feedback right after swipe,
     // before the Firestore listener catches up and connectionStatus becomes "pending"
     var justSentRequest by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid, currentUserUid) {
-        if (isPreview || isOwnProfile) return@LaunchedEffect
-        val targetUid = uid ?: return@LaunchedEffect
+        if (isPreview) return@LaunchedEffect
+        val targetUid = uid ?: currentUserUid ?: return@LaunchedEffect
+        connectionViewModel.listenConnectionCount(targetUid) // NEW: live count for whichever profile is shown
+
+        if (isOwnProfile) return@LaunchedEffect
         val myUid = currentUserUid ?: return@LaunchedEffect
         connectionViewModel.listenConnectionStatus(myUid, targetUid)
     }
@@ -455,7 +461,7 @@ fun ProfileScreen(
                     }
                     VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text((userProfile?.connection ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        Text(connectionCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                         Text("Connections", fontSize = 12.sp, color = AppColors.TextSecondary)
                     }
                 }
