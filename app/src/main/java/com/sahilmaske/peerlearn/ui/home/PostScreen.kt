@@ -311,10 +311,14 @@ fun PostScreen(
                             .background(AppColors.Surface)
                             .padding(4.dp)
                     ) {
-                        val itemWidth = maxWidth / 2
+                        val itemWidth = maxWidth / 3
 
                         val indicatorOffset by animateDpAsState(
-                            targetValue = if (selectedIntent == "teach") 0.dp else itemWidth,
+                            targetValue = when (selectedIntent) {
+                                "teach" -> 0.dp
+                                "learn" -> itemWidth
+                                else -> itemWidth * 2 // "help"
+                            },
                             animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
                                 stiffness = Spring.StiffnessLow
@@ -329,7 +333,7 @@ fun PostScreen(
                                     .width(itemWidth)
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(50))
-                                    .background(AppColors.DarkGreen)
+                                    .background(if (selectedIntent == "help") Color(0xFFD9822B) else AppColors.DarkGreen)
                             )
                         }
 
@@ -342,9 +346,10 @@ fun PostScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "I want to teach",
+                                    text = "Teach",
                                     color = if (selectedIntent == "teach") Color.White else AppColors.TextPrimary,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.sp
                                 )
                             }
 
@@ -356,9 +361,25 @@ fun PostScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "I want to learn",
+                                    text = "Learn",
                                     color = if (selectedIntent == "learn") Color.White else AppColors.TextPrimary,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedIntent = "help" }
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Need Help",
+                                    color = if (selectedIntent == "help") Color.White else AppColors.TextPrimary,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.sp
                                 )
                             }
                         }
@@ -424,10 +445,11 @@ fun PostScreen(
                         onValueChange = { description = it },
                         placeholder = {
                             Text(
-                                text = if (selectedIntent == "teach")
-                                    "Describe what you can teach and your experience..."
-                                else
-                                    "Describe what you want to learn and your current level...",
+                                text = when (selectedIntent) {
+                                    "teach" -> "Describe what you can teach and your experience..."
+                                    "learn" -> "Describe what you want to learn and your current level..."
+                                    else -> "Describe what you need help with..."
+                                },
                                 color = AppColors.TextSecondary
                             )
                         },
