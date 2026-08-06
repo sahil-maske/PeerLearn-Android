@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.sahilmaske.peerlearn.model.Message
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ChatConversationViewModel
 
@@ -39,14 +40,6 @@ class ChatConversationViewModelFactory(private val chatId: String) : ViewModelPr
     }
 }
 
-// Temporary local model, apna real Message model use karna (viewmodel se aayega)
-data class ChatMessage(
-    val id: String = "",
-    val text: String = "",
-    val senderId: String = "",
-    val timestamp: Long = System.currentTimeMillis()
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatConversationScreen(
@@ -54,14 +47,15 @@ fun ChatConversationScreen(
     peerAvatarUrl: String = "",
     peerName: String = "",
     skillContext: String = "",
-    currentUid: String = "me", // TODO: FirebaseAuth.getInstance().currentUser?.uid se replace karo
     onBack: () -> Unit,
     viewModel: ChatConversationViewModel = viewModel(
         factory = ChatConversationViewModelFactory(chatId)
     )
 ) {
-    // TODO: ye state ChatConversationViewModel se aana chahiye (collectAsState)
-    var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
+    val messages by viewModel.messages.collectAsState()
+    val peerInfo by viewModel.peerInfo.collectAsState()
+    val currentUid = viewModel.currentUid
+    
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
@@ -69,9 +63,9 @@ fun ChatConversationScreen(
         containerColor = AppColors.Background,
         topBar = {
             ChatTopBar(
-                peerAvatarUrl = peerAvatarUrl,
-                peerName = peerName,
-                skillContext = skillContext,
+                peerAvatarUrl = if (peerInfo.avatarUrl.isNotEmpty()) peerInfo.avatarUrl else peerAvatarUrl,
+                peerName = if (peerInfo.name.isNotEmpty()) peerInfo.name else peerName,
+                skillContext = if (peerInfo.skillContext.isNotEmpty()) peerInfo.skillContext else skillContext,
                 onBack = onBack
             )
         },
@@ -81,11 +75,7 @@ fun ChatConversationScreen(
                 onTextChange = { inputText = it },
                 onSend = {
                     if (inputText.isNotBlank()) {
-                        // TODO: viewModel.sendMessage(inputText) call karo yahan
-                        messages = messages + ChatMessage(
-                            text = inputText,
-                            senderId = currentUid
-                        )
+                        viewModel.sendMessage(inputText)
                         inputText = ""
                     }
                 }
@@ -172,7 +162,7 @@ private fun ChatTopBar(
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessage, isSentByMe: Boolean) {
+private fun MessageBubble(message: Message, isSentByMe: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isSentByMe) Arrangement.End else Arrangement.Start

@@ -111,18 +111,22 @@ fun ChatScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(conversations){ convo ->
-                ConversationItem(convo)
+                ConversationItem(convo, navController)
             }
         }
     }
 }
 @Composable
-fun ConversationItem(convo: Conversation) {
+fun ConversationItem(convo: Conversation, navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+                onClick = {
+            navController.navigate("chat_conversation/${convo.id}")
+        }
     ) {
         Row(
             modifier = Modifier
