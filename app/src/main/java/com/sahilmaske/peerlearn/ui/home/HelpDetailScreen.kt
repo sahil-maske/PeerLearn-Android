@@ -1,6 +1,5 @@
 package com.sahilmaske.peerlearn.ui.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +27,7 @@ import com.sahilmaske.peerlearn.model.Comment
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.util.timeAgo
-import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
+import com.sahilmaske.peerlearn.viewmodel.HelpDetailViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,18 +35,15 @@ import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 fun HelpDetailScreen(
     postId: String,
     onBack: () -> Unit,
-    profileViewModel: ProfileViewModel = viewModel(),
-    feedViewModel: FeedViewModel = viewModel(
-        factory = FeedViewModel.provideFactory(profileViewModel)
-    )
+    viewModel: HelpDetailViewModel = viewModel()
 ) {
-    val post by feedViewModel.selectedPost.collectAsState()
-    val comments by feedViewModel.comments.collectAsState()
+    val post by viewModel.post.collectAsState()
+    val comments by viewModel.comments.collectAsState()
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     LaunchedEffect(postId) {
-        feedViewModel.loadPost(postId)
-        feedViewModel.loadComments(postId)
+        viewModel.loadPost(postId)
+        viewModel.listenComments(postId)
     }
 
     Scaffold(
@@ -63,23 +59,22 @@ fun HelpDetailScreen(
             )
         },
         bottomBar = {
-            CommentInputField(
-                onSend = { text ->
-                    val user = FirebaseAuth.getInstance().currentUser
-                    if (user != null) {
-                        feedViewModel.addComment(
-                            postId = postId,
-                            authorId = user.uid,
-                            authorName = user.displayName ?: "User",
-                            authorAvatarUrl = user.photoUrl?.toString() ?: "",
-                            text = text
-                        )
-                    }
+            CommentInputField { text ->
+                val user = FirebaseAuth.getInstance().currentUser
+                user?.let {
+                    viewModel.addComment(
+                        postId = postId,
+                        authorId = it.uid,
+                        authorName = it.displayName ?: "User",
+                        authorAvatarUrl = it.photoUrl?.toString() ?: "",
+                        text = text
+                    )
                 }
-            )
+            }
         },
         containerColor = AppColors.Background
-    ) { padding ->
+    )
+{ padding ->
         if (post == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = AppColors.Primary)
@@ -115,7 +110,12 @@ fun HelpDetailScreen(
                             comment = comment,
                             isPostOwner = post!!.authorId == currentUserId,
                             onMarkHelpful = {
-                                feedViewModel.markCommentAsHelpful(postId, comment.id)
+                                viewModel.toggleMarkAsHelpful(
+                                    postId = postId,
+                                    commentId = comment.id,
+                                    helperId = comment.authorId,
+                                    currentlyMarked = comment.isMarkedHelpful
+                                )
                             }
                         )
                     }

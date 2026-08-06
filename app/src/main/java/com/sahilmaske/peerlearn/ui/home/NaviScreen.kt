@@ -60,12 +60,11 @@ fun NaviScreen(
     var selectedItem by remember { mutableIntStateOf(0) }
     // NEW: added "Alerts" tab (index 3) so NotificationScreen is actually reachable.
     // It was fully built but never wired into navigation before this.
-    val items = listOf("Home", "Post", "Chat", "Alerts", "Profile")
+    val items = listOf("Home", "Post", "Chat", "Profile")
     val icons = listOf(
         Icons.Default.Home,
         Icons.Default.PostAdd,
         Icons.AutoMirrored.Filled.Chat,
-        Icons.Default.Notifications,
         Icons.Default.Person
     )
 
@@ -126,8 +125,8 @@ fun NaviScreen(
                     onClose = { selectedItem = 0 }
                 )
                 2 -> ChatScreen(navController = navController)
-                3 -> NotificationScreen()
-                4 -> ProfileScreen(viewModel = profileViewModel)
+
+                3 -> ProfileScreen(viewModel = profileViewModel)
             }
         }
 
@@ -257,7 +256,7 @@ fun AnimatedBottomNavPreview() {
             .padding(24.dp)
     ) {
         AnimatedBottomNav(
-            items = listOf("Home", "Post", "Chat", "Alerts", "Profile"),
+            items = listOf("Home", "Post", "Chat","Profile"),
             icons = listOf(
                 Icons.Default.Home,
                 Icons.Rounded.AddCircle,

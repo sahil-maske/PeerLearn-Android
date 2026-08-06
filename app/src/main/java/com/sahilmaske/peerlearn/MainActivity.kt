@@ -13,6 +13,7 @@ import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
 import com.sahilmaske.peerlearn.ui.home.ChatConversationScreen
+import com.sahilmaske.peerlearn.ui.home.HelpDetailScreen
 import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.SeeAllPeersScreen
 import com.sahilmaske.peerlearn.ui.home.NaviScreen
 import com.sahilmaske.peerlearn.ui.home.ProfileScreen
@@ -94,5 +95,16 @@ fun PeerLearnApp() {
                 onBack = { navController.popBackStack() }
             )
         }
+        // NEW: Need Help post detail — shows comments as help offers, lets the
+        // post owner mark commenters as having helped
+        composable("help_detail/{postId}") { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            HelpDetailScreen(
+                postId = postId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
     }
 }

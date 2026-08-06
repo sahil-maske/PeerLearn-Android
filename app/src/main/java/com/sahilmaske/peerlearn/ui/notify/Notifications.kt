@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,16 +18,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.model.Connection
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
+
+// Screen width buckets — phone / foldable / tablet.
+// Just one number decides everything, easy to reason about.
+private const val MEDIUM_BREAKPOINT = 600   // dp
+private const val EXPANDED_BREAKPOINT = 840 // dp
 
 @Composable
 fun NotificationScreen(
@@ -44,7 +53,6 @@ fun NotificationScreen(
         connectionViewModel.listenIncomingRequests(myUid)
     }
 
-    // Whenever the incoming requests list changes, fetch names for any senders we don't have yet
     LaunchedEffect(incomingRequests) {
         if (incomingRequests.isNotEmpty()) {
             connectionViewModel.fetchSenderNames(incomingRequests.map { it.userA })
@@ -80,48 +88,93 @@ fun NotificationContent(
     onAccept: (Connection) -> Unit,
     onDeny: (Connection) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.Background)
-    ) {
-        // ---- Header ----
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-            Text(
-                "Notifications",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.TextPrimary
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Stay updated with your learning community.",
-                fontSize = 13.sp,
-                color = AppColors.TextSecondary
-            )
-        }
+    val screenWidth = LocalConfiguration.current.screenWidthDp
+    val isTablet = screenWidth >= MEDIUM_BREAKPOINT
+    val useGrid = screenWidth >= EXPANDED_BREAKPOINT
 
-        HorizontalDivider(color = AppColors.Divider, thickness = 0.7.dp)
+    // Content never stretches full-width on large screens; stays centered
+    // and capped so it's readable instead of edge-to-edge.
+    val maxContentWidth: Dp = if (isTablet) 800.dp else Dp.Unspecified
+    val sidePadding: Dp = if (isTablet) 32.dp else 16.dp
 
-        // ---- Body ----
-        if (incomingRequests.isEmpty()) {
-            EmptyNotificationsState()
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(incomingRequests, key = { it.connectionId }) { request ->
-                    ConnectionRequestCard(
-                        request = request,
-                        senderName = senderNames[request.userA],
-                        onAccept = { onAccept(request) },
-                        onDeny = { onDeny(request) }
-                    )
+    Scaffold(
+        topBar = {
+            NotificationTopBar(isTablet = isTablet)
+        },
+        containerColor = AppColors.Background
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Box(modifier = Modifier.widthIn(max = maxContentWidth).fillMaxSize()) {
+                if (incomingRequests.isEmpty()) {
+                    EmptyNotificationsState()
+                } else if (useGrid) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(sidePadding),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(incomingRequests, key = { it.connectionId }) { request ->
+                            ConnectionRequestCard(
+                                request = request,
+                                senderName = senderNames[request.userA],
+                                onAccept = { onAccept(request) },
+                                onDeny = { onDeny(request) }
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(sidePadding),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(incomingRequests, key = { it.connectionId }) { request ->
+                            ConnectionRequestCard(
+                                request = request,
+                                senderName = senderNames[request.userA],
+                                onAccept = { onAccept(request) },
+                                onDeny = { onDeny(request) }
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+// ---- Top bar: same content, scales cleanly for phone vs tablet ----
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationTopBar(isTablet: Boolean) {
+    Column {
+        TopAppBar(
+            title = {
+                Column {
+                    Text(
+                        "Notifications",
+                        style = if (isTablet) MaterialTheme.typography.headlineSmall
+                        else MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                    Text(
+                        "Stay updated with your learning community.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = AppColors.Background
+            )
+        )
+        HorizontalDivider(color = AppColors.Divider, thickness = 0.7.dp)
     }
 }
 
@@ -129,18 +182,8 @@ fun NotificationContent(
 @Composable
 fun NotificationScreenPreview() {
     val mockRequests = listOf(
-        Connection(
-            connectionId = "1",
-            userA = "user1",
-            userB = "user2",
-            status = "pending"
-        ),
-        Connection(
-            connectionId = "2",
-            userA = "user3",
-            userB = "user2",
-            status = "pending"
-        )
+        Connection(connectionId = "1", userA = "user1", userB = "user2", status = "pending"),
+        Connection(connectionId = "2", userA = "user3", userB = "user2", status = "pending")
     )
     NotificationContent(
         incomingRequests = mockRequests,
@@ -177,14 +220,13 @@ fun EmptyNotificationsState() {
         Spacer(Modifier.height(20.dp))
         Text(
             "No notifications yet",
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
             color = AppColors.TextPrimary
         )
         Spacer(Modifier.height(6.dp))
         Text(
             "You're all caught up! New connection\nrequests will show up here.",
-            fontSize = 13.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = AppColors.TextSecondary,
             textAlign = TextAlign.Center
         )
@@ -225,16 +267,13 @@ fun ConnectionRequestCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "CONNECTION REQUEST",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = AppColors.TextSecondary
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        // Shows a loading placeholder briefly until the name is fetched
                         senderName?.let { "$it wants to connect" } ?: "Loading request…",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmall,
                         color = AppColors.TextPrimary
                     )
                 }

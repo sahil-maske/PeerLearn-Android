@@ -137,7 +137,8 @@ class FeedViewModel(
                     "authorName" to authorName,
                     "authorAvatarUrl" to authorAvatarUrl,
                     "text" to text,
-                    "timestamp" to System.currentTimeMillis()
+                    "timestamp" to System.currentTimeMillis(),
+                    "isMarkedHelpful" to false
                 )
                 db.collection("posts").document(postId).collection("comments").add(comment).await()
                 db.collection("posts").document(postId)
