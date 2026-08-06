@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Notifications
@@ -89,6 +90,10 @@ fun HomeScreen(
         onNotificationClick = {
             navController.navigate("notifications")
         },
+        onHelpClick = { postId ->
+            // NEW: opens the "Need Help" post's detail screen (comments = help offers)
+            navController.navigate("help_detail/$postId")
+        },
         viewModel = viewModel
     )
 }
@@ -103,6 +108,7 @@ fun HomeScreenContent(
     onSeeAllClick: () -> Unit,
     onPeerClick: (String) -> Unit,
     onNotificationClick: () -> Unit,
+    onHelpClick: (String) -> Unit = {},
     viewModel: FeedViewModel? = null
 ) {
     // ---- Comments bottom sheet state ----
@@ -266,7 +272,8 @@ fun HomeScreenContent(
                     },
                     onCommentClick = {
                         activeCommentsPostId = post.id
-                    }
+                    },
+                    onHelpClick = { onHelpClick(post.id) }
                 )
             }
         }
@@ -300,7 +307,8 @@ fun PostCard(
     post: Post,
     currentUserId: String = "",
     onLikeClick: () -> Unit = {},
-    onCommentClick: () -> Unit = {}
+    onCommentClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {}
 ) {
     val initials = post.authorName
         .split(" ")
@@ -309,6 +317,7 @@ fun PostCard(
         .joinToString("")
 
     val isLiked = currentUserId.isNotEmpty() && currentUserId in post.likedBy
+    val needsHelp = post.intent == "help"
 
     Column(
         modifier = Modifier
@@ -347,31 +356,46 @@ fun PostCard(
                     Spacer(Modifier.width(6.dp))
                     Text("· ${timeAgo(post.timestamp)}", fontSize = 12.sp, color = AppColors.TextSecondary)
 
-                    if (post.postType == "query") {
-                        Spacer(Modifier.weight(1f))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(Color(0xFFEEEDFE))
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text("Query", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color(0xFF3C3489))
+                    when {
+                        post.postType == "query" -> {
+                            Spacer(Modifier.weight(1f))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color(0xFFEEEDFE))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Query", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color(0xFF3C3489))
+                            }
                         }
-                    } else if (post.intent.isNotEmpty()) {
-                        Spacer(Modifier.weight(1f))
-                        val isTeaching = post.intent == "teach"
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isTeaching) AppColors.SkillKnownBg else AppColors.SkillLearnBg)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                if (isTeaching) "Teaching" else "Learning",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isTeaching) AppColors.SkillKnownText else AppColors.SkillLearnText
-                            )
+                        // NEW: distinct "Need Help" badge, separate from Teaching/Learning
+                        needsHelp -> {
+                            Spacer(Modifier.weight(1f))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color(0xFFFDECD7))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Need Help", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color(0xFFD9822B))
+                            }
+                        }
+                        post.intent.isNotEmpty() -> {
+                            Spacer(Modifier.weight(1f))
+                            val isTeaching = post.intent == "teach"
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (isTeaching) AppColors.SkillKnownBg else AppColors.SkillLearnBg)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    if (isTeaching) "Teaching" else "Learning",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isTeaching) AppColors.SkillKnownText else AppColors.SkillLearnText
+                                )
+                            }
                         }
                     }
                 }
@@ -408,6 +432,30 @@ fun PostCard(
                 }
 
                 Spacer(Modifier.height(10.dp))
+
+                // NEW: prominent "Offer Help" button, only for help-intent posts
+                if (needsHelp) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFD9822B))
+                            .clickable { onHelpClick() }
+                            .padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.VolunteerActivism,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Offer Help", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
 
                 // ---- Engagement row: comment, like, share ----
                 Row(
@@ -473,6 +521,17 @@ fun FeedScreenPreview() {
             likeCount = 2,
             commentCount = 5,
             timestamp = System.currentTimeMillis() - 6 * 60 * 60 * 1000
+        ),
+        Post(
+            id = "p3",
+            authorName = "Aman V.",
+            heading = "Stuck on Firestore security rules",
+            description = "Need help writing rules for a subcollection.",
+            intent = "help",
+            postType = "text",
+            likeCount = 4,
+            commentCount = 2,
+            timestamp = System.currentTimeMillis() - 3 * 60 * 60 * 1000
         )
     )
     HomeScreenContent(
