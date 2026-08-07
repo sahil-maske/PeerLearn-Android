@@ -137,7 +137,15 @@ fun ChatConversationContent(
             }
             LaunchedEffect(messages.size) {
                 if (messages.isNotEmpty()) {
-                    listState.animateScrollToItem(messages.size - 1)
+                    val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo
+                        .lastOrNull()?.index ?: 0
+                    val totalItems = listState.layoutInfo.totalItemsCount
+                    val isNearBottom = totalItems - lastVisibleIndex <= 3
+                    val isMyMessage = messages.last().senderId == currentUserId
+
+                    if (isNearBottom || isMyMessage) {
+                        listState.animateScrollToItem(messages.size - 1)
+                    }
                 }
             }
 
