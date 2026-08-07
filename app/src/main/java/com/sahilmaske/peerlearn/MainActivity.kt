@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
@@ -68,8 +70,15 @@ fun PeerLearnApp() {
                 }
             )
         }
-        composable("main_nav") {
-            NaviScreen(navController = navController)
+        composable(
+            route = "main_nav?tab={tab}",
+            arguments = listOf(navArgument("tab") {
+                type = NavType.IntType
+                defaultValue = 0
+            })
+        ) { backStackEntry ->
+            val tab = backStackEntry.arguments?.getInt("tab") ?: 0
+            NaviScreen(navController = navController, initialTab = tab)
         }
         composable("notifications") {
             NotificationScreen(
@@ -85,14 +94,20 @@ fun PeerLearnApp() {
                 uid = userId,
                 onNavigateToChat = { chatId ->
                     navController.navigate("chat_conversation/$chatId")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
+        // NOTE: route ek hi baar define hai (pehle duplicate tha, hata diya)
         composable("chat_conversation/{chatId}") { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
             ChatConversationScreen(
                 chatId = chatId,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.navigate("main_nav?tab=2") {
+                        popUpTo("main_nav?tab=2") { inclusive = true }
+                    }
+                }
             )
         }
         // NEW: Need Help post detail — shows comments as help offers, lets the
@@ -104,7 +119,5 @@ fun PeerLearnApp() {
                 onBack = { navController.popBackStack() }
             )
         }
-
-
     }
 }
