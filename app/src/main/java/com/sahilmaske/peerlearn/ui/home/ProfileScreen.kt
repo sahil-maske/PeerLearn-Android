@@ -67,7 +67,8 @@ fun ProfileScreen(
     uid: String? = null,
     viewModel: ProfileViewModel = viewModel(),
     connectionViewModel: ConnectionViewModel = viewModel(),
-    onNavigateToChat: (String) -> Unit = {}
+    onNavigateToChat: (String) -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
     // ---- State & Data ----
     val userProfileFromVM by viewModel.userProfile.collectAsState()
@@ -299,7 +300,7 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = {}) {
+                IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBackIos,
                         contentDescription = "Back",

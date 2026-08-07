@@ -52,12 +52,13 @@ import androidx.compose.ui.platform.LocalInspectionMode
 @Composable
 fun NaviScreen(
     navController: NavController,
+    initialTab: Int = 0,
     profileViewModel: ProfileViewModel = viewModel(),
     feedViewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
     )
 ) {
-    var selectedItem by remember { mutableIntStateOf(0) }
+    var selectedItem by remember(initialTab) { mutableIntStateOf(initialTab) }
     // NEW: added "Alerts" tab (index 3) so NotificationScreen is actually reachable.
     // It was fully built but never wired into navigation before this.
     val items = listOf("Home", "Post", "Chat", "Profile")

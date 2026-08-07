@@ -65,5 +65,3 @@ I have fixed the render issue in `ChatScreenPreview` where Firebase was not init
 
 ### Preview Rendering
 The `ChatScreenPreview` now renders correctly in Android Studio without throwing `IllegalStateException: Default FirebaseApp is not initialized`.
-
-![ChatScreenPreview](file:///D:/PeerLearn2/.artifacts/7c6136fa-dda5-4b78-bada-61fcbf4a5fc2/ChatScreenPreview.png)

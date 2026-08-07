@@ -4,11 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -84,6 +86,7 @@ fun ChatConversationContent(
     onSendMessage: (String) -> Unit
 ) {
     val screenSize = rememberScreenSize()
+    val listState = rememberLazyListState()
 
     // Content ko bade screens pe center karke max width dena (tablet pe full-width chat ajeeb lagta hai)
     val contentMaxWidth = when (screenSize) {
@@ -102,6 +105,7 @@ fun ChatConversationContent(
             modifier = Modifier
                 .fillMaxHeight()
                 .statusBarsPadding() // <-- root ko status bar ke neeche se start karata hai (edge-to-edge fix)
+                .imePadding()
                 .then(
                     if (contentMaxWidth != Dp.Unspecified) Modifier.widthIn(max = contentMaxWidth)
                     else Modifier.fillMaxWidth()
@@ -118,6 +122,7 @@ fun ChatConversationContent(
 
             // ---------- Messages List ----------
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -128,6 +133,11 @@ fun ChatConversationContent(
                 items(messages) { message ->
                     val isMe = message.senderId == currentUserId
                     MessageBubble(text = message.text, isMe = isMe, screenSize = screenSize)
+                }
+            }
+            LaunchedEffect(messages.size) {
+                if (messages.isNotEmpty()) {
+                    listState.animateScrollToItem(messages.size - 1)
                 }
             }
 
@@ -165,6 +175,7 @@ fun ChatTopBar(
             .padding(horizontal = topBarPadding, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+
         IconButton(onClick = onBack) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBackIos,
@@ -173,14 +184,31 @@ fun ChatTopBar(
             )
         }
 
-        AsyncImage(
-            model = peerInfo.avatarUrl,
-            contentDescription = "Profile Picture",
-            modifier = Modifier
-                .size(avatarSize)
-                .clip(CircleShape)
-                .background(Color.Gray)
-        )
+        if (peerInfo.avatarUrl.isBlank()) {
+            // Photo nahi hai -> fallback placeholder (peach bg + swap-arrow icon)
+            Box(
+                modifier = Modifier
+                    .size(avatarSize)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFCE4CC)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.SwapHoriz,
+                    contentDescription = "No profile photo",
+                    tint = Color(0xFFB5651D),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else {
+            AsyncImage(
+                model = peerInfo.avatarUrl,
+                contentDescription = peerInfo.name,
+                modifier = Modifier
+                    .size(avatarSize)
+                    .clip(CircleShape)
+            )
+        }
 
         Spacer(modifier = Modifier.width(10.dp))
 
