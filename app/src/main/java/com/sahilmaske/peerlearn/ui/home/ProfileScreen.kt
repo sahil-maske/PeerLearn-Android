@@ -58,6 +58,10 @@ import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.math.max
 import kotlin.math.min
 
@@ -103,8 +107,23 @@ fun ProfileScreen(
     }
 
 
-    val currentUserUid = if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid
-    val isOwnProfile = uid == null || uid == currentUserUid
+    val currentUserUid = remember {
+        mutableStateOf(if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid)
+    }
+    // Observe auth state changes
+    DisposableEffect(Unit) {
+        if (!isPreview) {
+            val auth = FirebaseAuth.getInstance()
+            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                currentUserUid.value = firebaseAuth.currentUser?.uid
+            }
+            auth.addAuthStateListener(listener)
+            onDispose { auth.removeAuthStateListener(listener) }
+        } else {
+            onDispose {}
+        }
+    }
+    val isOwnProfile = uid == null || uid == currentUserUid.value
 
     // ---- Connection state (only relevant for other users' profiles) ----
     val connectionStatus by connectionViewModel.connectionStatus.collectAsState()
@@ -119,13 +138,13 @@ fun ProfileScreen(
     // before the Firestore listener catches up and connectionStatus becomes "pending"
     var justSentRequest by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uid, currentUserUid) {
+    LaunchedEffect(uid, currentUserUid.value) {
         if (isPreview) return@LaunchedEffect
-        val targetUid = uid ?: currentUserUid ?: return@LaunchedEffect
+        val targetUid = uid ?: currentUserUid.value ?: return@LaunchedEffect
         connectionViewModel.listenConnectionCount(targetUid) // NEW: live count for whichever profile is shown
 
         if (isOwnProfile) return@LaunchedEffect
-        val myUid = currentUserUid ?: return@LaunchedEffect
+        val myUid = currentUserUid.value ?: return@LaunchedEffect
         connectionViewModel.listenConnectionStatus(myUid, targetUid)
     }
 
@@ -157,16 +176,45 @@ fun ProfileScreen(
     val sheetState = rememberModalBottomSheetState()
 
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { uploadToCloudinary(context, it, viewModel) }
+        uri?.let {
+            coroutineScope.launch {
+                val imageUrl = uploadToCloudinary(context, it)
+                if (imageUrl.isNotBlank()) {
+                    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+                    FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(uid)
+                        .set(mapOf("avatarUrl" to imageUrl), SetOptions.merge())
+                        .addOnSuccessListener {
+                            viewModel.fetchUserProfile(uid)
+                        }
+                }
+            }
+        }
     }
 
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
-            cameraImageUri?.let { uploadToCloudinary(context, it, viewModel) }
+            cameraImageUri?.let {
+                coroutineScope.launch {
+                    val imageUrl = uploadToCloudinary(context, it)
+                    if (imageUrl.isNotBlank()) {
+                        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+                        FirebaseFirestore.getInstance()
+                            .collection("users")
+                            .document(uid)
+                            .set(mapOf("avatarUrl" to imageUrl), SetOptions.merge())
+                            .addOnSuccessListener {
+                                viewModel.fetchUserProfile(uid)
+                            }
+                    }
+                }
+            }
         }
     }
 
@@ -492,7 +540,7 @@ fun ProfileScreen(
                     connectionStatus == "accepted" -> {
                         Button(
                             onClick = {
-                                val myUid = currentUserUid ?: return@Button
+                                val myUid = currentUserUid.value ?: return@Button
                                 val targetUid = uid ?: return@Button
                                 val chatId = listOf(myUid, targetUid).sorted().joinToString("_")
                                 onNavigateToChat(chatId)
@@ -553,7 +601,7 @@ fun ProfileScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = horizontalPadding),
                             onConfirmed = {
-                                val myUid = currentUserUid ?: return@SlideToSwapButton
+                                val myUid = currentUserUid.value ?: return@SlideToSwapButton
                                 val targetUid = uid ?: return@SlideToSwapButton
                                 connectionViewModel.sendConnectionRequest(
                                     currentUserId = myUid,
@@ -879,11 +927,12 @@ fun ImagePickerDialog(
 }
 
 // Separate function for uploading to Cloudinary
-fun uploadToCloudinary(context: android.content.Context, uri: Uri, viewModel: ProfileViewModel) {
+@OptIn(ExperimentalCoroutinesApi::class)
+suspend fun uploadToCloudinary(context: android.content.Context, uri: Uri): String {
     val cloudName = "db7wneko6"
     val uploadPreset = "peerlearn_avatar"
 
-    val stream = context.contentResolver.openInputStream(uri) ?: return
+    val stream = context.contentResolver.openInputStream(uri) ?: return ""
     val originalBitmap = android.graphics.BitmapFactory.decodeStream(stream)
     stream.close()
 
@@ -897,7 +946,7 @@ fun uploadToCloudinary(context: android.content.Context, uri: Uri, viewModel: Pr
     resized.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, baos)
     val bytes = baos.toByteArray()
 
-    Thread {
+    return withContext(Dispatchers.IO) {
         try {
             val url = java.net.URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
             val boundary = "Boundary-${System.currentTimeMillis()}"
@@ -914,21 +963,13 @@ fun uploadToCloudinary(context: android.content.Context, uri: Uri, viewModel: Pr
             output.flush()
 
             val response = connection.inputStream.bufferedReader().readText()
-            val imageUrl = org.json.JSONObject(response).getString("secure_url")
+            org.json.JSONObject(response).getString("secure_url")
                 .replace("/upload/", "/upload/w_400,h_400,c_thumb,g_face/")
-
-            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@Thread
-            FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(uid)
-                .set(mapOf("avatarUrl" to imageUrl), SetOptions.merge())
-                .addOnSuccessListener {
-                    viewModel.fetchUserProfile(uid)
-                }
         } catch (e: Exception) {
             e.printStackTrace()
+            ""
         }
-    }.start()
+    }
 }
 
 @Preview(showBackground = true)

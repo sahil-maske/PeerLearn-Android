@@ -66,12 +66,20 @@ fun ChatConversationScreen(
 
     val peerInfo by viewModel.peerInfo.collectAsState()
     val messages by viewModel.messages.collectAsState()
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+    val currentUserId = remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid) }
+    DisposableEffect(Unit) {
+        val auth = FirebaseAuth.getInstance()
+        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            currentUserId.value = firebaseAuth.currentUser?.uid
+        }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
 
     ChatConversationContent(
         peerInfo = peerInfo,
         messages = messages,
-        currentUserId = currentUserId,
+        currentUserId = currentUserId.value,
         onBack = onBack,
         onSendMessage = { viewModel.sendMessage(it) }
     )

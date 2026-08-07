@@ -153,10 +153,8 @@ fun PeerSuggestionCard(
         // ---- Connect button (teal fill + dashed outline) ----
         DashedConnectButton(
             onClick = {
-                val db = FirebaseFirestore.getInstance()
-                db.collection("testCollection")
-                    .document("testDoc")
-                    .set(mapOf("message" to "Hello Firebase"))
+                // Connection logic is handled by ProfileScreen via ConnectionViewModel
+                // This card is for browsing; clicking the avatar/name navigates to profile
             }
         )
     }

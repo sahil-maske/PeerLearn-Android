@@ -35,11 +35,21 @@ import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 fun HelpDetailScreen(
     postId: String,
     onBack: () -> Unit,
-    viewModel: HelpDetailViewModel = viewModel()
+    viewModel: HelpDetailViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val post by viewModel.post.collectAsState()
     val comments by viewModel.comments.collectAsState()
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val userProfile by profileViewModel.userProfile.collectAsState()
+    val currentUserId = remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid ?: "") }
+    DisposableEffect(Unit) {
+        val auth = FirebaseAuth.getInstance()
+        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            currentUserId.value = firebaseAuth.currentUser?.uid ?: ""
+        }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
 
     LaunchedEffect(postId) {
         viewModel.loadPost(postId)
@@ -60,13 +70,13 @@ fun HelpDetailScreen(
         },
         bottomBar = {
             CommentInputField { text ->
-                val user = FirebaseAuth.getInstance().currentUser
+                val user = userProfile
                 user?.let {
                     viewModel.addComment(
                         postId = postId,
-                        authorId = it.uid,
-                        authorName = it.displayName ?: "User",
-                        authorAvatarUrl = it.photoUrl?.toString() ?: "",
+                        authorId = currentUserId.value,
+                        authorName = it.name,
+                        authorAvatarUrl = it.avatarUrl,
                         text = text
                     )
                 }
@@ -108,7 +118,7 @@ fun HelpDetailScreen(
                     items(comments) { comment ->
                         HelpOfferRow(
                             comment = comment,
-                            isPostOwner = post!!.authorId == currentUserId,
+                            isPostOwner = post!!.authorId == currentUserId.value,
                             onMarkHelpful = {
                                 viewModel.toggleMarkAsHelpful(
                                     postId = postId,

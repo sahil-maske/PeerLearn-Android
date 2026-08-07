@@ -72,7 +72,22 @@ fun NaviScreen(
     val userProfile by profileViewModel.userProfile.collectAsState()
 
     val isPreview = LocalInspectionMode.current
-    val currentUserId = if (isPreview) "mock_user" else FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val currentUserId = remember {
+        mutableStateOf(if (isPreview) "mock_user" else FirebaseAuth.getInstance().currentUser?.uid ?: "")
+    }
+    // Observe auth state changes to update currentUserId
+    DisposableEffect(Unit) {
+        if (!isPreview) {
+            val auth = FirebaseAuth.getInstance()
+            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                currentUserId.value = firebaseAuth.currentUser?.uid ?: ""
+            }
+            auth.addAuthStateListener(listener)
+            onDispose { auth.removeAuthStateListener(listener) }
+        } else {
+            onDispose {}
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (isPreview) return@LaunchedEffect
@@ -121,7 +136,7 @@ fun NaviScreen(
             modifier = Modifier.fillMaxSize()
         ) { screen ->
             when (screen) {
-                0 -> HomeScreen(viewModel = feedViewModel, navController = navController, currentUserId = currentUserId)
+                0 -> HomeScreen(viewModel = feedViewModel, navController = navController, currentUserId = currentUserId.value)
                 1 -> PostScreen(
                     onClose = { selectedItem = 0 }
                 )

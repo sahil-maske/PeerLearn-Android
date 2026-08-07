@@ -593,7 +593,8 @@ fun PostScreen(
                             coroutineScope.launch {
                                 isPosting = true
                                 try {
-                                    val uid = FirebaseAuth.getInstance().currentUser?.uid
+                                    val uid = userProfile?.uid
+                                        ?: FirebaseAuth.getInstance().currentUser?.uid
 
                                     if (uid != null) {
                                         var uploadedImageUrl = ""
