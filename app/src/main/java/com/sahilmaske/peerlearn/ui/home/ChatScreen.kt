@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,7 +50,17 @@ fun ChatScreen(
     viewModel: ChatViewModel = viewModel()
 ) {
     val conversations by viewModel.conversations.collectAsState()
+    ChatScreenContent(
+        navController = navController,
+        conversations = conversations
+    )
+}
 
+@Composable
+fun ChatScreenContent(
+    navController: NavController,
+    conversations: List<Conversation>
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -81,11 +92,11 @@ fun ChatScreen(
         }
         Row(
             modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFFE9E7E0))
-            .padding(horizontal = 14.dp),
+                .fillMaxWidth()
+                .height(50.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFE9E7E0))
+                .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
 
         ) {
@@ -124,7 +135,7 @@ fun ConversationItem(convo: Conversation, navController: NavController) {
             .clip(RoundedCornerShape(16.dp)),
 
         colors = CardDefaults.cardColors(containerColor = Color.White),
-                onClick = {
+        onClick = {
             navController.navigate("chat_conversation/${convo.id}")
         }
     ) {
@@ -134,13 +145,31 @@ fun ConversationItem(convo: Conversation, navController: NavController) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = convo.avatarUrl,
-                contentDescription = convo.name,
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-            )
+            if (convo.avatarUrl.isBlank()) {
+                // Photo nahi hai -> fallback placeholder (peach bg + swap-arrow icon)
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFCE4CC)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.SwapHoriz,
+                        contentDescription = "No profile photo",
+                        tint = Color(0xFFB5651D),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            } else {
+                AsyncImage(
+                    model = convo.avatarUrl,
+                    contentDescription = convo.name,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -192,6 +221,25 @@ fun ConversationItem(convo: Conversation, navController: NavController) {
 @Composable
 fun ChatScreenPreview() {
     val navController = androidx.navigation.compose.rememberNavController()
-    ChatScreen(navController = navController)
+    ChatScreenContent(
+        navController = navController,
+        conversations = listOf(
+            Conversation(
+                id = "1",
+                name = "Sahil Maske",
+                avatarUrl = "",
+                lastMessage = "Hey, how's the project going?",
+                time = "10:30 AM",
+                unreadCount = 1,
+                hasUnread = true
+            ),
+            Conversation(
+                id = "2",
+                name = "Aman Gupta",
+                avatarUrl = "",
+                lastMessage = "Check the new designs.",
+                time = "Yesterday"
+            )
+        )
+    )
 }
-
