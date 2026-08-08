@@ -9,6 +9,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -130,7 +132,15 @@ fun NaviScreen(
         AnimatedContent(
             targetState = selectedItem,
             transitionSpec = {
-                fadeIn(tween(200)) togetherWith fadeOut(tween(200))
+                val direction = if (targetState > initialState) 1 else -1
+                (slideInHorizontally(
+                    animationSpec = tween(280),
+                    initialOffsetX = { fullWidth -> direction * fullWidth / 4 }
+                ) + fadeIn(animationSpec = tween(280))) togetherWith
+                        (slideOutHorizontally(
+                            animationSpec = tween(280),
+                            targetOffsetX = { fullWidth -> -direction * fullWidth / 4 }
+                        ) + fadeOut(animationSpec = tween(220)))
             },
             label = "screenTransition",
             modifier = Modifier.fillMaxSize()

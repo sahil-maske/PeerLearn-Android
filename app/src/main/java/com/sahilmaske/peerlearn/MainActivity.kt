@@ -107,6 +107,9 @@ fun PeerLearnApp() {
                     navController.navigate("main_nav?tab=2") {
                         popUpTo("main_nav?tab=2") { inclusive = true }
                     }
+                },
+                onProfileClick = { userId ->
+                    navController.navigate("profile/$userId")
                 }
             )
         }

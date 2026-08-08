@@ -81,6 +81,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
@@ -133,46 +136,38 @@ fun BouncingDotsLoader(
 }
 
 // ==================== CLOUDINARY IMAGE UPLOAD ====================
+@OptIn(ExperimentalCoroutinesApi::class)
 suspend fun uploadImageToCloudinary(context: android.content.Context, uri: Uri): String {
-    return suspendCancellableCoroutine { continuation ->
-        val cloudName = "db7wneko6"
-        val uploadPreset = "peerlearn_avatar"
+    val cloudName = "db7wneko6"
+    val uploadPreset = "peerlearn_avatar"
 
+    val stream = context.contentResolver.openInputStream(uri)
+    val bytes = stream?.readBytes()
+    stream?.close()
+
+    if (bytes == null) return ""
+
+    return withContext(Dispatchers.IO) {
         try {
-            val stream = context.contentResolver.openInputStream(uri)
-            val bytes = stream?.readBytes()
-            stream?.close()
+            val url = java.net.URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
+            val boundary = "Boundary-${System.currentTimeMillis()}"
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
 
-            if (bytes == null) {
-                continuation.resumeWith(Result.success(""))
-                return@suspendCancellableCoroutine
-            }
+            val output = connection.outputStream
+            output.write("--$boundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$uploadPreset\r\n".toByteArray())
+            output.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"post.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
+            output.write(bytes)
+            output.write("\r\n--$boundary--\r\n".toByteArray())
+            output.flush()
 
-            Thread {
-                try {
-                    val url = java.net.URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
-                    val boundary = "Boundary-${System.currentTimeMillis()}"
-                    val connection = url.openConnection() as java.net.HttpURLConnection
-                    connection.requestMethod = "POST"
-                    connection.doOutput = true
-                    connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-
-                    val output = connection.outputStream
-                    output.write("--$boundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$uploadPreset\r\n".toByteArray())
-                    output.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"post.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
-                    output.write(bytes)
-                    output.write("\r\n--$boundary--\r\n".toByteArray())
-                    output.flush()
-
-                    val response = connection.inputStream.bufferedReader().readText()
-                    val imageUrl = org.json.JSONObject(response).getString("secure_url")
-                    continuation.resumeWith(Result.success(imageUrl))
-                } catch (e: Exception) {
-                    continuation.resumeWith(Result.success(""))
-                }
-            }.start()
+            val response = connection.inputStream.bufferedReader().readText()
+            org.json.JSONObject(response).getString("secure_url")
         } catch (e: Exception) {
-            continuation.resumeWith(Result.success(""))
+            e.printStackTrace()
+            ""
         }
     }
 }
