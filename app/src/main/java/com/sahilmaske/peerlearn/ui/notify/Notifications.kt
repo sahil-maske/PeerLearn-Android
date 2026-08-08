@@ -67,7 +67,8 @@ fun NotificationScreen(
                 connectionId = request.connectionId,
                 accept = true,
                 userA = request.userA,
-                userB = request.userB
+                userB = request.userB,
+                requestedBy = request.requestedBy
             )
         },
         onDeny = { request ->
@@ -75,7 +76,8 @@ fun NotificationScreen(
                 connectionId = request.connectionId,
                 accept = false,
                 userA = request.userA,
-                userB = request.userB
+                userB = request.userB,
+                requestedBy = request.requestedBy
             )
         }
     )
