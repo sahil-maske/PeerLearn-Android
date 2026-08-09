@@ -2,7 +2,6 @@ package com.sahilmaske.peerlearn.ui.Settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,18 +23,15 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material3.ripple
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,79 +40,72 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 
-// ---------- Screen size categories (same pattern as ProfileScreen/ChatConversationScreen) ----------
-enum class SettingsScreenSize { COMPACT, MEDIUM, EXPANDED }
-
-@Composable
-private fun rememberSettingsScreenSize(): SettingsScreenSize {
-    val widthDp = LocalConfiguration.current.screenWidthDp
-    return when {
-        widthDp < 600 -> SettingsScreenSize.COMPACT
-        widthDp < 840 -> SettingsScreenSize.MEDIUM
-        else -> SettingsScreenSize.EXPANDED
-    }
-}
-
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    // NEW: every row now has its own callback instead of sharing one onClick.
-    // Each defaults to {} so the screen still compiles/builds fine even before
-    // you wire the actual logic behind a given row — wire them one at a time.
-    onAccountClick: () -> Unit = {},
-    onNotificationsClick: () -> Unit = {},
-    onPrivacyClick: () -> Unit = {},
-    onAppearanceClick: () -> Unit = {},
-    onSupportClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {},
-    onDeleteAccountClick: () -> Unit = {}
+    onAccountClick: () -> Unit,
+    onLogoutClick: () -> Unit
 ) {
-    val screenSize = rememberSettingsScreenSize()
+    // ---- DEVICE COMPATIBILITY: screen width check ----
+    // screenWidthDp batata hai device ki width dp me. Chhote phone ~360dp hote hain,
+    // tablets 600dp+ hote hain. Isi number se decide karte hain "chhota hai ya bada".
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
 
-    // Content max-width so the settings card doesn't stretch edge-to-edge on tablets
-    val contentMaxWidth: Dp = when (screenSize) {
-        SettingsScreenSize.COMPACT -> Dp.Unspecified
-        SettingsScreenSize.MEDIUM -> 560.dp
-        SettingsScreenSize.EXPANDED -> 680.dp
-    }
-    val horizontalPadding = when (screenSize) {
-        SettingsScreenSize.COMPACT -> 16.dp
-        SettingsScreenSize.MEDIUM -> 28.dp
-        SettingsScreenSize.EXPANDED -> 40.dp
-    }
-    val rowHeight = when (screenSize) {
-        SettingsScreenSize.COMPACT -> 56.dp
-        SettingsScreenSize.MEDIUM -> 60.dp
-        SettingsScreenSize.EXPANDED -> 64.dp
-    }
-    val titleFontSize = when (screenSize) {
-        SettingsScreenSize.COMPACT -> 18.sp
-        SettingsScreenSize.MEDIUM -> 20.sp
-        SettingsScreenSize.EXPANDED -> 22.sp
+    // Simple 3-way check: COMPACT (phone) / MEDIUM (small tablet) / EXPANDED (large tablet)
+    // Values (16, 28, 40 dp) manually chuni hain — jitna bada screen utna zyada padding
+    // dena taaki content edge se chipka na lage.
+    val horizontalPadding: Dp = when {
+        screenWidthDp < 600 -> 16.dp
+        screenWidthDp < 840 -> 28.dp
+        else -> 40.dp
     }
 
-    // Root Box centers the content column on wide screens; on phones it just fills the width.
+    // Row height bhi thoda badha dete hain bade screens pe — tablet pe chhota row
+    // ajeeb/squished lagta hai, thoda comfortable touch target chahiye.
+    val rowHeight: Dp = when {
+        screenWidthDp < 600 -> 56.dp
+        screenWidthDp < 840 -> 60.dp
+        else -> 64.dp
+    }
+
+    // Title font size bhi thoda scale karte hain
+    val titleFontSize = when {
+        screenWidthDp < 600 -> 18.sp
+        screenWidthDp < 840 -> 20.sp
+        else -> 22.sp
+    }
+
+    // Content max width: tablet/large screen pe agar content full-width stretch
+    // hoga to cards bahut lambi/ajeeb dikhengi. Isliye max width set karke
+    // content ko center me rakhte hain (Dp.Unspecified = phone pe koi limit nahi).
+    val contentMaxWidth: Dp = when {
+        screenWidthDp < 600 -> Dp.Unspecified
+        screenWidthDp < 840 -> 560.dp
+        else -> 680.dp
+    }
+
+    // Icon background color for the new iOS-style rows
+    val iconBg = AppColors.PrimaryContainer
+
+    // Box root banaya taaki bade screens pe Column ko horizontally center kar sakein.
+    // contentAlignment = TopCenter matlab: content upar se start hoga, aur horizontally center hoga.
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.Background),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .then(
+                    // agar contentMaxWidth set hai (tablet), to width usi tak limit karo
+                    // warna (phone pe) poori width le lo
                     if (contentMaxWidth != Dp.Unspecified) Modifier.widthIn(max = contentMaxWidth)
                     else Modifier.fillMaxWidth()
                 )
                 .padding(16.dp)
         ) {
-
             // ---- Top Bar ----
-            // FIX: previously used a hardcoded Spacer(95.dp) to fake-center the title,
-            // which breaks on any screen width other than the one it was eyeballed for.
-            // A Box with the back button pinned to the start and the title centered
-            // via Modifier.align stays correctly centered on every device size.
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,145 +128,278 @@ fun SettingsScreen(
                     color = AppColors.TextPrimary,
                     modifier = Modifier.align(Alignment.Center)
                 )
+                Spacer(modifier = Modifier.width(28.dp))
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ---- Grouped settings card ----
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-                    .clip(RoundedCornerShape(14.dp))
+                    .padding(horizontal = horizontalPadding)  // FIX: fixed 16.dp -> responsive variable
+                    .clip(RoundedCornerShape(14.dp))  // iOS grouped-table-view corner radius (usually 10-14dp)
                     .background(AppColors.Surface)
             ) {
-                SettingsRow(
-                    icon = Icons.Default.AccountCircle,
-                    label = "ACCOUNT",
-                    height = rowHeight,
-                    onClick = onAccountClick
-                )
-                SettingsDivider()
 
-                SettingsRow(
-                    icon = Icons.Default.Notifications,
-                    label = "NOTIFICATIONS",
-                    height = rowHeight,
-                    onClick = onNotificationsClick
-                )
-                SettingsDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)  // FIX: fixed 56.dp -> responsive variable
+                        .clickable { onAccountClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.AccountCircle,
+                            contentDescription = "Account",
+                            tint = AppColors.Primary, // Changed to Primary for visibility
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "ACCOUNT",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
 
-                SettingsRow(
-                    icon = Icons.Default.PrivacyTip,
-                    label = "PRIVACY",
-                    height = rowHeight,
-                    onClick = onPrivacyClick
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = AppColors.Divider,
+                    thickness = 0.5.dp
                 )
-                SettingsDivider()
 
-                SettingsRow(
-                    icon = Icons.Default.DarkMode,
-                    label = "APP APPEARANCE",
-                    height = rowHeight,
-                    onClick = onAppearanceClick
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)
+                        .clickable { onLogoutClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "NOTIFICATIONS",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = AppColors.Divider,
+                    thickness = 0.5.dp
                 )
-                SettingsDivider()
 
-                SettingsRow(
-                    icon = Icons.AutoMirrored.Filled.HelpOutline,
-                    label = "SUPPORT",
-                    height = rowHeight,
-                    onClick = onSupportClick
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)
+                        .clickable { onLogoutClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PrivacyTip,
+                            contentDescription = "Privacy",
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "PRIVACY",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = AppColors.Divider,
+                    thickness = 0.5.dp
                 )
-                SettingsDivider()
 
-                SettingsRow(
-                    icon = Icons.AutoMirrored.Filled.Logout,
-                    label = "LOGOUT",
-                    height = rowHeight,
-                    tint = Color(0xFFE53935),
-                    onClick = onLogoutClick
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)
+                        .clickable { onLogoutClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.DarkMode,
+                            contentDescription = "Dark Mode",
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "APP APPEARANCE",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = AppColors.Divider,
+                    thickness = 0.5.dp
                 )
-                SettingsDivider()
 
-                SettingsRow(
-                    icon = Icons.Default.DeleteForever,
-                    label = "DELETE ACCOUNT",
-                    height = rowHeight,
-                    tint = Color(0xFFE53935),
-                    onClick = onDeleteAccountClick
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)
+                        .clickable { onLogoutClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.HelpOutline,
+                            contentDescription = "Support",
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "SUPPORT",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = AppColors.Divider,
+                    thickness = 0.5.dp
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)
+                        .clickable { onLogoutClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFEBEE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Logout",
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "LOGOUT",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFE53935),
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = AppColors.Divider,
+                    thickness = 0.5.dp
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight)
+                        .clickable { onLogoutClick() }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFEBEE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteForever,
+                            contentDescription = "Delete Account",
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "DELETE ACCOUNT",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFE53935),
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }
 }
 
-// ---- Reusable row (avoids repeating the same Row/Icon/Text block 7 times) ----
-@Composable
-private fun SettingsRow(
-    icon: ImageVector,
-    label: String,
-    height: Dp,
-    onClick: () -> Unit,
-    tint: Color = AppColors.TextSecondary
-) {
-    // NEW: explicit ripple + interaction source so every row gives clear tap feedback
-    // (press ripple), instead of relying on the default indication only.
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(height)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = ripple(color = AppColors.Primary),
-                onClick = onClick
-            )
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = tint,
-            modifier = Modifier.size(24.dp)
-        )
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            color = tint,
-            letterSpacing = 0.5.sp,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-        )
-        Spacer(modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 52.dp),
-        color = AppColors.Divider,
-        thickness = 0.5.dp
-    )
-}
-
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 fun SettingsScreenPreviewPhone() {
-    SettingsScreen(onBack = {})
-}
-
-@Preview(showBackground = true, widthDp = 700)
-@Composable
-fun SettingsScreenPreviewMedium() {
-    SettingsScreen(onBack = {})
+    SettingsScreen(
+        onBack = {},
+        onAccountClick = {},
+        onLogoutClick = {}
+    )
 }
 
 @Preview(showBackground = true, widthDp = 1000)
 @Composable
-fun SettingsScreenPreviewExpanded() {
-    SettingsScreen(onBack = {})
+fun SettingsScreenPreviewTablet() {
+    SettingsScreen(
+        onBack = {},
+        onAccountClick = {},
+        onLogoutClick = {}
+    )
 }

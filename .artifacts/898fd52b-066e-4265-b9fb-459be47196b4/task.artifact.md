@@ -1,0 +1,5 @@
+- `[x]` Fix unresolved reference in `Account.kt`
+    - `[x]` Add imports for `LocalConfiguration` and `Dp`
+    - `[x]` Add `horizontalPadding` in `AccountScreen`
+- `[x]` Verify build
+- `[x]` Create walkthrough

@@ -12,6 +12,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
+import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
@@ -128,6 +129,18 @@ fun PeerLearnApp() {
 
         composable("settings") {
             SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onAccountClick = { navController.navigate("account") },
+                onLogoutClick = {
+                    FirebaseAuth.getInstance().signOut()
+                    navController.navigate("login") {
+                        popUpTo("main_nav") { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable("account") {
+            AccountScreen(
                 onBack = { navController.popBackStack() }
             )
         }
