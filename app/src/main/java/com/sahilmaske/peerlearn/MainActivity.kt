@@ -128,8 +128,7 @@ fun PeerLearnApp() {
 
         composable("settings") {
             SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onClick = { }
+                onBack = { navController.popBackStack() }
             )
         }
     }
