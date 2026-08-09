@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -64,6 +65,20 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.math.max
 import kotlin.math.min
+
+// ---------- Screen size categories (Material3 standard breakpoints) ----------
+// COMPACT = phones, MEDIUM = small tablets/foldables, EXPANDED = large tablets
+enum class ProfileScreenSize { COMPACT, MEDIUM, EXPANDED }
+
+@Composable
+private fun rememberProfileScreenSize(): ProfileScreenSize {
+    val widthDp = LocalConfiguration.current.screenWidthDp
+    return when {
+        widthDp < 600 -> ProfileScreenSize.COMPACT
+        widthDp < 840 -> ProfileScreenSize.MEDIUM
+        else -> ProfileScreenSize.EXPANDED
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,17 +172,52 @@ fun ProfileScreen(
         }
     }
 
-    // ---- Responsive sizing (compatible across all mobile widths) ----
+    // ---- Responsive sizing (COMPACT / MEDIUM / EXPANDED) ----
+    val screenSize = rememberProfileScreenSize()
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp.dp
 
-    // Avatar scales between 96dp (small phones ~320dp width) and 130dp (large phones ~430dp+ width)
-    val avatarSize = remember(screenWidthDp) {
-        max(96.dp.value, min(130.dp.value, screenWidthDp.value * 0.30f)).dp
+    // Avatar scales within each breakpoint's own range instead of one global formula,
+    // so tablets don't just get a slightly-bigger phone avatar — they get a size
+    // appropriate to their own category.
+    val avatarSize = remember(screenWidthDp, screenSize) {
+        when (screenSize) {
+            ProfileScreenSize.COMPACT -> max(96.dp.value, min(130.dp.value, screenWidthDp.value * 0.30f)).dp
+            ProfileScreenSize.MEDIUM -> 150.dp
+            ProfileScreenSize.EXPANDED -> 170.dp
+        }
     }
-    // Horizontal padding scales between 12dp and 20dp based on screen width
-    val horizontalPadding = remember(screenWidthDp) {
-        max(12.dp.value, min(20.dp.value, screenWidthDp.value * 0.045f)).dp
+    // Horizontal padding scales per breakpoint
+    val horizontalPadding = remember(screenWidthDp, screenSize) {
+        when (screenSize) {
+            ProfileScreenSize.COMPACT -> max(12.dp.value, min(20.dp.value, screenWidthDp.value * 0.045f)).dp
+            ProfileScreenSize.MEDIUM -> 28.dp
+            ProfileScreenSize.EXPANDED -> 36.dp
+        }
+    }
+    // Content max-width: on tablets we don't want cards stretching edge-to-edge,
+    // so we cap the width and center the whole column.
+    val contentMaxWidth: Dp = when (screenSize) {
+        ProfileScreenSize.COMPACT -> Dp.Unspecified
+        ProfileScreenSize.MEDIUM -> 620.dp
+        ProfileScreenSize.EXPANDED -> 760.dp
+    }
+    // Posts grid column count per breakpoint
+    val postColumns = when (screenSize) {
+        ProfileScreenSize.COMPACT -> 2
+        ProfileScreenSize.MEDIUM -> 3
+        ProfileScreenSize.EXPANDED -> 4
+    }
+    // Name/title font sizes scale up slightly on larger screens for visual balance
+    val nameFontSize = when (screenSize) {
+        ProfileScreenSize.COMPACT -> 24.sp
+        ProfileScreenSize.MEDIUM -> 26.sp
+        ProfileScreenSize.EXPANDED -> 28.sp
+    }
+    val collegeFontSize = when (screenSize) {
+        ProfileScreenSize.COMPACT -> 17.sp
+        ProfileScreenSize.MEDIUM -> 18.sp
+        ProfileScreenSize.EXPANDED -> 19.sp
     }
 
     // Dialog/sheet states
@@ -320,571 +370,588 @@ fun ProfileScreen(
     }
 
     // ---- Main Screen ----
-    LazyColumn(
+    // Root Box centers the content column on wide screens; on phones it just fills the width.
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppColors.Background)
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(AppColors.Background),
+        contentAlignment = Alignment.TopCenter
     ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .then(
+                    if (contentMaxWidth != Dp.Unspecified) Modifier.widthIn(max = contentMaxWidth)
+                    else Modifier.fillMaxWidth()
+                )
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-        // Loading state
-        if (uiState is ProfileState.Loading) {
-            item {
-                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AppColors.Primary)
-                }
-            }
-            return@LazyColumn
-        }
-
-        // ---- Top Bar ----
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding, vertical = 12.dp)
-                    .background(AppColors.Surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = "Back",
-                        tint = AppColors.Icon
-                    )
-                }
-                Text("Profile", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-
-                IconButton(onClick = onSettingsClick) {
-                    Icon(
-                        Icons.Filled.Settings,
-                        contentDescription = "Settings",
-                        tint = AppColors.Icon
-                    )
-                }
-            }
-        }
-
-        // ---- Avatar with Edit Icon ----
-        item {
-            Spacer(Modifier.height(10.dp))
-            Box(contentAlignment = Alignment.BottomEnd) {
-
-                if (userProfile?.avatarUrl.isNullOrEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .size(avatarSize) // FIX: was 140.dp, now matches image size + scales per screen
-                            .clip(CircleShape)
-                            .background(AppColors.SecondaryContainer)
-                            .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val initials = userProfile?.name
-                            ?.split(" ")
-                            ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
-                            ?.take(2)
-                            ?.joinToString("") ?: "?"
-                        Text(initials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+            // Loading state
+            if (uiState is ProfileState.Loading) {
+                item {
+                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AppColors.Primary)
                     }
-                } else {
-                    AsyncImage(
-                        model = userProfile?.avatarUrl,
-                        contentDescription = "Avatar",
-                        modifier = Modifier
-                            .size(avatarSize) // FIX: was 110.dp, now matches placeholder size + scales per screen
-                            .clip(CircleShape)
-                            .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
                 }
-
-                // Edit badge — white ring + single dark green background, no double bg
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .offset(x = 4.dp, y = 4.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.TextWhite)
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF0F6E6E))
-                        .clickable { showImagePickerDialog = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null,
-                        tint = AppColors.TextWhite,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-
-        // ---- Name + College + Location + Bio ----
-        item {
-            Text(
-                text = userProfile?.name ?: "Your Name",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = AppColors.TextPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = userProfile?.college ?: "College Name",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Medium,
-                color = AppColors.TextPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            )
-            Spacer(Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.LocationOn,
-                    contentDescription = null,
-                    tint = AppColors.TextSecondary,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = userProfile?.location?.takeIf { it.isNotBlank() } ?: "Location not added",
-                    fontSize = 14.sp,
-                    color = AppColors.TextSecondary
-                )
+                return@LazyColumn
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            Text(
-                text = userProfile?.about?.takeIf { it.isNotBlank() }
-                    ?: "Computer Science major passionate about bridging the gap between design and code.",
-                fontSize = 14.sp,
-                color = AppColors.TextSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding * 1.5f) // slightly wider inset for readable line length
-            )
-
-            Spacer(Modifier.height(8.dp))
-        }
-
-        // ---- Stats Card (Posts, Helps, Connections) ----
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                elevation = CardDefaults.cardElevation(2.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            ) {
+            // ---- Top Bar ----
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                        .padding(horizontal = horizontalPadding, vertical = 12.dp)
+                        .background(AppColors.Surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(postCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                        Text("Post", fontSize = 12.sp, color = AppColors.TextSecondary)
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBackIos,
+                            contentDescription = "Back",
+                            tint = AppColors.Icon
+                        )
                     }
-                    VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text((userProfile?.helpCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                        Text("Helps", fontSize = 12.sp, color = AppColors.TextSecondary)
-                    }
-                    VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(connectionCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                        Text("Connections", fontSize = 12.sp, color = AppColors.TextSecondary)
+                    Text("Profile", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            tint = AppColors.Icon
+                        )
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-        }
 
-        // ---- Edit Profile (own profile) OR Connect/Pending/Message (other user's profile) ----
-        item {
-            if (isOwnProfile) {
-                OutlinedButton(
-                    onClick = {},
+            // ---- Avatar with Edit Icon ----
+            item {
+                Spacer(Modifier.height(10.dp))
+                Box(contentAlignment = Alignment.BottomEnd) {
+
+                    if (userProfile?.avatarUrl.isNullOrEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .size(avatarSize)
+                                .clip(CircleShape)
+                                .background(AppColors.SecondaryContainer)
+                                .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val initials = userProfile?.name
+                                ?.split(" ")
+                                ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
+                                ?.take(2)
+                                ?.joinToString("") ?: "?"
+                            Text(initials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        }
+                    } else {
+                        AsyncImage(
+                            model = userProfile?.avatarUrl,
+                            contentDescription = "Avatar",
+                            modifier = Modifier
+                                .size(avatarSize)
+                                .clip(CircleShape)
+                                .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // Edit badge — white ring + single dark green background, no double bg
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .offset(x = 4.dp, y = 4.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.TextWhite)
+                            .padding(2.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF0F6E6E))
+                            .clickable { showImagePickerDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = AppColors.TextWhite,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // ---- Name + College + Location + Bio ----
+            item {
+                Text(
+                    text = userProfile?.name ?: "Your Name",
+                    fontSize = nameFontSize,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextPrimary,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = horizontalPadding)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, AppColors.Primary),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Primary)
-                ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp), tint = AppColors.Primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Edit Profile", fontWeight = FontWeight.Medium, color = AppColors.Primary)
-                }
-            } else {
-                when {
-                    connectionStatus == "accepted" -> {
-                        Button(
-                            onClick = {
-                                val myUid = currentUserUid.value ?: return@Button
-                                val targetUid = uid ?: return@Button
-                                val chatId = listOf(myUid, targetUid).sorted().joinToString("_")
-                                onNavigateToChat(chatId)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = horizontalPadding)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
-                        ) {
-                            Text("Message", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
-                        }
-                    }
-                    connectionStatus == "pending" -> {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = horizontalPadding)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text("Request Pending", fontWeight = FontWeight.Medium)
-                        }
-                    }
-                    // NEW: instant confirmation right after swipe, while listener hasn't
-                    // caught up to "pending" yet
-                    justSentRequest -> {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = horizontalPadding)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0F6E6E),
-                                disabledContainerColor = Color(0xFF0F6E6E)
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = AppColors.TextWhite,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Request Sent", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
-                        }
-                    }
-                    else -> {
-                        // null or "rejected" -> allow sending a fresh connection request
-                        SlideToSwapButton(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = horizontalPadding),
-                            onConfirmed = {
-                                val myUid = currentUserUid.value ?: return@SlideToSwapButton
-                                val targetUid = uid ?: return@SlideToSwapButton
-                                connectionViewModel.sendConnectionRequest(
-                                    currentUserId = myUid,
-                                    targetUserId = targetUid,
-                                    onSuccess = {
-                                        // Only show "Request Sent" once Firestore actually confirms the write
-                                        justSentRequest = true
-                                    },
-                                    onFailure = { e ->
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "Couldn't send request: ${e.localizedMessage ?: "check your connection"}",
-                                            android.widget.Toast.LENGTH_LONG
-                                        ).show()
-                                    }
-                                )
-                            }
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = userProfile?.college ?: "College Name",
+                    fontSize = collegeFontSize,
+                    fontWeight = FontWeight.Medium,
+                    color = AppColors.TextPrimary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
+                )
+                Spacer(Modifier.height(4.dp))
 
-        // ---- Can Teach Section ----
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                elevation = CardDefaults.cardElevation(0.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = Color(0xFF0F6E6E),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text("Can Teach", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                    }
-                    Spacer(Modifier.height(10.dp))
-
-                    val teachSkills = userProfile?.knownSkills
-                    if (teachSkills.isNullOrEmpty()) {
-                        Text("No skills added yet", fontSize = 13.sp, color = AppColors.TextSecondary)
-                    } else {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            teachSkills.forEach { skill ->
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(50))
-                                        .background(AppColors.PrimaryContainer)
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Text(skill, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF0F6E6E))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-
-        // ---- Wants to Learn Section ----
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                elevation = CardDefaults.cardElevation(0.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Lightbulb,
-                            contentDescription = null,
-                            tint = Color(0xFFFFDDB5),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text("Wants to Learn", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                    }
-                    Spacer(Modifier.height(10.dp))
-
-                    val learnSkills = userProfile?.learningSkills
-                    if (learnSkills.isNullOrEmpty()) {
-                        Text("No skills added yet", fontSize = 13.sp, color = AppColors.TextSecondary)
-                    } else {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            learnSkills.forEach { skill ->
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(50))
-                                        .background(Color(0xFFF5D9A8))
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Text(skill, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF8A5A00))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-        }
-
-        // ---- Recent Recognition ----
-        item {
-            Text(
-                "Recent Recognition",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = AppColors.TextPrimary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            )
-            Spacer(Modifier.height(10.dp))
-
-            // Top Mentor badge card
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                elevation = CardDefaults.cardElevation(0.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding)
-            ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(AppColors.PrimaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = Color(0xFF085041),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Top Mentor (March)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
-                        Text("Helped 12 peers with Design Systems.", fontSize = 12.sp, color = AppColors.TextSecondary)
-                    }
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = userProfile?.location?.takeIf { it.isNotBlank() } ?: "Location not added",
+                        fontSize = 14.sp,
+                        color = AppColors.TextSecondary
+                    )
                 }
-            }
-            Spacer(Modifier.height(10.dp))
 
-            // Two stat cards side by side
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+                Spacer(Modifier.height(12.dp))
+
+                Text(
+                    text = userProfile?.about?.takeIf { it.isNotBlank() }
+                        ?: "Computer Science major passionate about bridging the gap between design and code.",
+                    fontSize = 14.sp,
+                    color = AppColors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding * 1.5f) // slightly wider inset for readable line length
+                )
+
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // ---- Stats Card (Posts, Helps, Connections) ----
+            item {
                 Card(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    modifier = Modifier.weight(1f)
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Icon(
-                            Icons.Default.VerifiedUser,
-                            contentDescription = null,
-                            tint = Color(0xFF085041),
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(postCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                            Text("Post", fontSize = 12.sp, color = AppColors.TextSecondary)
+                        }
+                        VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text((userProfile?.helpCount ?: 0).toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                            Text("Helps", fontSize = 12.sp, color = AppColors.TextSecondary)
+                        }
+                        VerticalDivider(modifier = Modifier.height(32.dp), color = AppColors.Divider)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(connectionCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                            Text("Connections", fontSize = 12.sp, color = AppColors.TextSecondary)
+                        }
                     }
                 }
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Column(
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // ---- Edit Profile (own profile) OR Connect/Pending/Message (other user's profile) ----
+            item {
+                if (isOwnProfile) {
+                    OutlinedButton(
+                        onClick = {},
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.ThumbUp,
-                            contentDescription = null,
-                            tint = Color(0xFF835400),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-        }
-
-        // ---- Posts Header ----
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Posts", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = AppColors.TextPrimary)
-                Text("See all", color = AppColors.Primary, fontSize = 14.sp)
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-
-        // ---- Posts Grid ----
-        items(dummyPosts.chunked(2)) { rowPosts ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                rowPosts.forEach { post ->
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(160.dp)
-                            .pointerInput(Unit) {
-                                detectTapGestures(onLongPress = { selectedPost = post })
-                            },
+                            .padding(horizontal = horizontalPadding)
+                            .height(48.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                        border = BorderStroke(1.dp, AppColors.Primary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Primary)
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp), tint = AppColors.Primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Edit Profile", fontWeight = FontWeight.Medium, color = AppColors.Primary)
+                    }
+                } else {
+                    when {
+                        connectionStatus == "accepted" -> {
+                            Button(
+                                onClick = {
+                                    val myUid = currentUserUid.value ?: return@Button
+                                    val targetUid = uid ?: return@Button
+                                    val chatId = listOf(myUid, targetUid).sorted().joinToString("_")
+                                    onNavigateToChat(chatId)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = horizontalPadding)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
+                            ) {
+                                Text("Message", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
+                            }
+                        }
+                        connectionStatus == "pending" -> {
+                            Button(
+                                onClick = {},
+                                enabled = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = horizontalPadding)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Text("Request Pending", fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        // NEW: instant confirmation right after swipe, while listener hasn't
+                        // caught up to "pending" yet
+                        justSentRequest -> {
+                            Button(
+                                onClick = {},
+                                enabled = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = horizontalPadding)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF0F6E6E),
+                                    disabledContainerColor = Color(0xFF0F6E6E)
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = AppColors.TextWhite,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Request Sent", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
+                            }
+                        }
+                        else -> {
+                            // null or "rejected" -> allow sending a fresh connection request
+                            SlideToSwapButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = horizontalPadding),
+                                onConfirmed = {
+                                    val myUid = currentUserUid.value ?: return@SlideToSwapButton
+                                    val targetUid = uid ?: return@SlideToSwapButton
+                                    connectionViewModel.sendConnectionRequest(
+                                        currentUserId = myUid,
+                                        targetUserId = targetUid,
+                                        onSuccess = {
+                                            // Only show "Request Sent" once Firestore actually confirms the write
+                                            justSentRequest = true
+                                        },
+                                        onFailure = { e ->
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                "Couldn't send request: ${e.localizedMessage ?: "check your connection"}",
+                                                android.widget.Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // ---- Can Teach Section ----
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color(0xFF0F6E6E),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Can Teach", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        }
+                        Spacer(Modifier.height(10.dp))
+
+                        val teachSkills = userProfile?.knownSkills
+                        if (teachSkills.isNullOrEmpty()) {
+                            Text("No skills added yet", fontSize = 13.sp, color = AppColors.TextSecondary)
+                        } else {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                teachSkills.forEach { skill ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(AppColors.PrimaryContainer)
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(skill, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF0F6E6E))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // ---- Wants to Learn Section ----
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Lightbulb,
+                                contentDescription = null,
+                                tint = Color(0xFFFFDDB5),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Wants to Learn", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        }
+                        Spacer(Modifier.height(10.dp))
+
+                        val learnSkills = userProfile?.learningSkills
+                        if (learnSkills.isNullOrEmpty()) {
+                            Text("No skills added yet", fontSize = 13.sp, color = AppColors.TextSecondary)
+                        } else {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                learnSkills.forEach { skill ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(Color(0xFFF5D9A8))
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(skill, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF8A5A00))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+            }
+
+            // ---- Recent Recognition ----
+            item {
+                Text(
+                    "Recent Recognition",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextPrimary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
+                )
+                Spacer(Modifier.height(10.dp))
+
+                // Top Mentor badge card
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        when (post.imageUrl) {
-                                            "purple" -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
-                                            "red" -> listOf(AppColors.Tertiary, AppColors.TertiaryContainer)
-                                            "green" -> listOf(AppColors.Secondary, AppColors.SecondaryContainer)
-                                            "orange" -> listOf(AppColors.TertiaryContainer, AppColors.SecondaryContainer)
-                                            else -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
-                                        }
-                                    )
-                                )
-                                .padding(12.dp)
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AppColors.PrimaryContainer),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = post.heading,
-                                color = AppColors.TextWhite,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.align(Alignment.BottomStart)
+                            Icon(
+                                Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = Color(0xFF085041),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Top Mentor (March)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
+                            Text("Helped 12 peers with Design Systems.", fontSize = 12.sp, color = AppColors.TextSecondary)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+
+                // Two stat cards side by side
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                        elevation = CardDefaults.cardElevation(0.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.VerifiedUser,
+                                contentDescription = null,
+                                tint = Color(0xFF085041),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                        elevation = CardDefaults.cardElevation(0.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.ThumbUp,
+                                contentDescription = null,
+                                tint = Color(0xFF835400),
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 }
-                if (rowPosts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                Spacer(Modifier.height(20.dp))
+            }
+
+            // ---- Posts Header ----
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Posts", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = AppColors.TextPrimary)
+                    Text("See all", color = AppColors.Primary, fontSize = 14.sp)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // ---- Posts Grid (2 cols COMPACT, 3 cols MEDIUM, 4 cols EXPANDED) ----
+            items(dummyPosts.chunked(postColumns)) { rowPosts ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    rowPosts.forEach { post ->
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(160.dp)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(onLongPress = { selectedPost = post })
+                                },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.linearGradient(
+                                            when (post.imageUrl) {
+                                                "purple" -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
+                                                "red" -> listOf(AppColors.Tertiary, AppColors.TertiaryContainer)
+                                                "green" -> listOf(AppColors.Secondary, AppColors.SecondaryContainer)
+                                                "orange" -> listOf(AppColors.TertiaryContainer, AppColors.SecondaryContainer)
+                                                else -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
+                                            }
+                                        )
+                                    )
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = post.heading,
+                                    color = AppColors.TextWhite,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.align(Alignment.BottomStart)
+                                )
+                            }
+                        }
+                    }
+                    // Fill remaining slots in the last row so cards don't stretch to fill the gap
+                    if (rowPosts.size < postColumns) {
+                        repeat(postColumns - rowPosts.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
             }
         }
     }
@@ -974,8 +1041,20 @@ suspend fun uploadToCloudinary(context: android.content.Context, uri: Uri): Stri
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 360)
 @Composable
-fun ProfileScreenPreview() {
+fun ProfileScreenPreviewPhone() {
+    ProfileScreen()
+}
+
+@Preview(showBackground = true, widthDp = 700)
+@Composable
+fun ProfileScreenPreviewMedium() {
+    ProfileScreen()
+}
+
+@Preview(showBackground = true, widthDp = 1000)
+@Composable
+fun ProfileScreenPreviewExpanded() {
     ProfileScreen()
 }
