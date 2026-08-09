@@ -72,7 +72,8 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel(),
     connectionViewModel: ConnectionViewModel = viewModel(),
     onNavigateToChat: (String) -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     // ---- State & Data ----
     val userProfileFromVM by viewModel.userProfile.collectAsState()
@@ -339,7 +340,7 @@ fun ProfileScreen(
 
         // ---- Top Bar ----
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -356,7 +357,8 @@ fun ProfileScreen(
                     )
                 }
                 Text("Profile", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
-                IconButton(onClick = {}) {
+
+                IconButton(onClick = onSettingsClick) {
                     Icon(
                         Icons.Filled.Settings,
                         contentDescription = "Settings",

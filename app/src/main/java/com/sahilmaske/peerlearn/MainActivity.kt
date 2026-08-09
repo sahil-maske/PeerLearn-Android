@@ -12,6 +12,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
+import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
 import com.sahilmaske.peerlearn.ui.home.ChatConversationScreen
@@ -79,6 +80,7 @@ fun PeerLearnApp() {
         ) { backStackEntry ->
             val tab = backStackEntry.arguments?.getInt("tab") ?: 0
             NaviScreen(navController = navController, initialTab = tab)
+
         }
         composable("notifications") {
             NotificationScreen(
@@ -95,7 +97,8 @@ fun PeerLearnApp() {
                 onNavigateToChat = { chatId ->
                     navController.navigate("chat_conversation/$chatId")
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onSettingsClick = { navController.navigate("settings") }
             )
         }
         // NOTE: route ek hi baar define hai (pehle duplicate tha, hata diya)
@@ -120,6 +123,13 @@ fun PeerLearnApp() {
             HelpDetailScreen(
                 postId = postId,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("settings") {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onClick = { }
             )
         }
     }

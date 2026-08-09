@@ -152,7 +152,10 @@ fun NaviScreen(
                 )
                 2 -> ChatScreen(navController = navController)
 
-                3 -> ProfileScreen(viewModel = profileViewModel)
+                3 -> ProfileScreen(
+                    viewModel = profileViewModel,
+                    onSettingsClick = { navController.navigate("settings") }
+                )
             }
         }
 
