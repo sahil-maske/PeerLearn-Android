@@ -148,7 +148,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(iconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -184,7 +185,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(iconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -219,7 +221,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(iconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -245,6 +248,7 @@ fun SettingsScreen(
                     thickness = 0.5.dp
                 )
 
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -254,7 +258,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(iconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -289,7 +294,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(iconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -324,7 +330,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFEBEE)),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFFFEBEE)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -359,7 +366,8 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFEBEE)),
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFFFEBEE)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -378,6 +386,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                     Spacer(modifier = Modifier.weight(1f))
+
                 }
             }
         }

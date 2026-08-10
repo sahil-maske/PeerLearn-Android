@@ -11,6 +11,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.PhoneIphone
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -23,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,18 +59,24 @@ fun AccountScreen(
         else -> 40.dp
     }
 
-    val currentUser = FirebaseAuth.getInstance().currentUser
+    val isPreview = LocalInspectionMode.current
+    val currentUserEmail = remember {
+        if (isPreview) "sample@email.com" else FirebaseAuth.getInstance().currentUser?.email
+    }
 
     val avatarSize = 110.dp
 
     LaunchedEffect(Unit) {
-        viewModel.loadProfile(null) // apna hi profile load hoga
+        if (!isPreview) {
+            viewModel.loadProfile(null) // apna hi profile load hoga
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(21.dp),
+
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Top bar
@@ -76,7 +86,11 @@ fun AccountScreen(
                 .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
             IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "Back", tint = AppColors.Primary)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBackIos,
+                    contentDescription = "Back",
+                    tint = AppColors.Primary
+                )
             }
             Text(
                 text = "Account",
@@ -108,7 +122,12 @@ fun AccountScreen(
                             ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
                             ?.take(2)
                             ?.joinToString("") ?: "?"
-                        Text(initials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                        Text(
+                            initials,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
+                        )
                     }
                 } else {
                     AsyncImage(
@@ -169,6 +188,7 @@ fun AccountScreen(
                 .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.Surface)
         ) {
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -191,7 +211,7 @@ fun AccountScreen(
                     )
                 }
                 Text(
-                    text =currentUser?.email ?: "No email found",
+                    text = currentUserEmail ?: "No email found",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = AppColors.TextSecondary,
@@ -200,14 +220,13 @@ fun AccountScreen(
                 )
 
 
-
             }
-        }
+
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = horizontalPadding)
+//                .padding(horizontal = horizontalPadding)
                 .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.Surface)
         ) {
@@ -246,6 +265,104 @@ fun AccountScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
 
+            }
+
+        }
+
+    } /// new column ends here
+        Spacer(modifier = Modifier.height(24.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = horizontalPadding)
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.Surface)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(IconBg),
+                    contentAlignment = Alignment.Center
+
+                )
+                {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Privacy",
+                        tint = IconTint,
+                        modifier = Modifier.size(24.dp)
+
+                    )
+                }
+
+                Text(
+                    text = "PASSWORD",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = AppColors.TextSecondary,
+                    letterSpacing = 0.5.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+
+
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 52.dp),
+                color = AppColors.Divider,
+                thickness = 0.5.dp
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+//                    .padding(horizontal = horizontalPadding)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AppColors.Surface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(IconBg),
+                        contentAlignment = Alignment.Center
+
+                    )
+                    {
+                        Icon(
+                            Icons.Default.PhoneIphone,
+                            contentDescription = "Privacy",
+                            tint = IconTint,
+                            modifier = Modifier.size(24.dp)
+
+                        )
+                    }
+
+                    Text(
+                        text = "PHONE NUMBER",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+
+
+                }
             }
         }
     }
