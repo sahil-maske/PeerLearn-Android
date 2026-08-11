@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
+import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
 import com.sahilmaske.peerlearn.ui.home.ChatConversationScreen
@@ -141,8 +142,16 @@ fun PeerLearnApp() {
         }
         composable("account") {
             AccountScreen(
+                onBack = { navController.popBackStack() },
+                onVerifyEmailClick = {
+                    navController.navigate("verify_email")
+                }
+            )
+        }
+        composable("verify_email") {
+            VerifyEmailScreen(
                 onBack = { navController.popBackStack() }
             )
         }
     }
-}
+    }

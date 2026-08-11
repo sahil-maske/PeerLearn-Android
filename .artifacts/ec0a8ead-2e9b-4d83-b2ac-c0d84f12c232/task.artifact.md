@@ -1,0 +1,3 @@
+- [x] Fix naming and reference in `AccountScreen.kt`
+- [x] Implement navigation in `MainActivity.kt`
+- [x] Verify build

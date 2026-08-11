@@ -180,7 +180,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .clickable { onLogoutClick() }
+                        .clickable { /* TODO: Notifications */ }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -216,7 +216,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .clickable { onLogoutClick() }
+                        .clickable { /* TODO: Privacy */ }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -253,7 +253,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .clickable { onLogoutClick() }
+                        .clickable { /* TODO: App Appearance */ }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -289,7 +289,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .clickable { onLogoutClick() }
+                        .clickable { /* TODO: Support */ }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -361,7 +361,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .clickable { onLogoutClick() }
+                        .clickable { /* TODO: Delete Account */ }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
