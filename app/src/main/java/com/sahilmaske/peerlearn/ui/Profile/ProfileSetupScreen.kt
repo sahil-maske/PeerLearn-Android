@@ -360,6 +360,7 @@ fun ProfileSetupScreen(
                                 uid = currentUid,
                                 name = name,
                                 college = college,
+                                email = FirebaseAuth.getInstance().currentUser?.email ?: "",
                                 location = location,
                                 about = about,
                                 knownSkills = knownSkills,

@@ -14,4 +14,5 @@ data class User(
     val postCount : Int = 0,
     val helpCount: Int = 0,
     val phoneNumber : String = "",
+    val email : String = ""
 )
