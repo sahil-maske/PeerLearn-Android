@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.AccountCircle
@@ -17,10 +18,13 @@ import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneIphone
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -50,11 +55,13 @@ private val IconTint = Color(0xFF534AB7)
 @Composable
 fun AccountScreen(
     onBack: () -> Unit,
+    onChangePasswordClick: () -> Unit,
     onVerifyEmailClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     var showImagePickerDialog by remember { mutableStateOf(false) }
+    var showPhoneDialog by remember { mutableStateOf(false) }
 
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPadding: Dp = when {
@@ -286,6 +293,7 @@ fun AccountScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable{onChangePasswordClick()}
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
 
@@ -294,6 +302,7 @@ fun AccountScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
+
                         .background(IconBg),
                     contentAlignment = Alignment.Center
 
@@ -329,6 +338,7 @@ fun AccountScreen(
                 modifier = Modifier
                     .fillMaxWidth()
 //                    .padding(horizontal = horizontalPadding)
+                    .clickable { showPhoneDialog = true }
                     .clip(RoundedCornerShape(14.dp))
                     .background(AppColors.Surface)
             ) {
@@ -365,6 +375,39 @@ fun AccountScreen(
                         letterSpacing = 0.5.sp,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
+                    if (showPhoneDialog) {
+                        var phoneInput by remember { mutableStateOf(userProfile?.phoneNumber ?: "") }
+
+                        AlertDialog(
+                            onDismissRequest = { showPhoneDialog = false },
+                            title = {
+                                Text("Phone Number", fontWeight = FontWeight.SemiBold)
+                            },
+                            text = {
+                                OutlinedTextField(
+                                    value = phoneInput,
+                                    onValueChange = { phoneInput = it },
+                                    label = { Text("Enter phone number") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    viewModel.updatePhoneNumber(phoneInput)
+                                    showPhoneDialog = false
+                                }) {
+                                    Text("Save", color = AppColors.Primary, fontWeight = FontWeight.Medium)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showPhoneDialog = false }) {
+                                    Text("Cancel", color = AppColors.TextSecondary)
+                                }
+                            }
+                        )
+                    }
 
 
                 }
@@ -426,5 +469,5 @@ fun AccountScreen(
 @Preview(showBackground = true)
 @Composable
 fun AccountScreenPreview() {
-    AccountScreen(onBack = {}, onVerifyEmailClick = {})
+    AccountScreen(onBack = {}, onVerifyEmailClick = {}, onChangePasswordClick = {})
 }

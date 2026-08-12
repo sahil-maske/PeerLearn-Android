@@ -17,6 +17,9 @@ class AccountViewModel : ViewModel() {
     private val _verificationState = MutableStateFlow<VerificationState>(VerificationState.Idle)
     val verificationState: StateFlow<VerificationState> = _verificationState
 
+    private val _passwordResetState = MutableStateFlow<VerificationState>(VerificationState.Idle)
+    val passwordResetState: StateFlow<VerificationState> = _passwordResetState
+
     fun sendVerificationEmail() {
         _verificationState.value = VerificationState.Loading
         auth.currentUser?.sendEmailVerification()
@@ -25,6 +28,18 @@ class AccountViewModel : ViewModel() {
             }
             ?.addOnFailureListener { e ->
                 _verificationState.value = VerificationState.Error(e.message ?: "Failed to send")
+            }
+    }
+
+    fun sendPasswordResetEmail() {
+        val email = auth.currentUser?.email ?: return
+        _passwordResetState.value = VerificationState.Loading
+        auth.sendPasswordResetEmail(email)
+            .addOnSuccessListener {
+                _passwordResetState.value = VerificationState.Sent
+            }
+            .addOnFailureListener { e ->
+                _passwordResetState.value = VerificationState.Error(e.message ?: "Failed to send")
             }
     }
 

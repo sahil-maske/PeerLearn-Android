@@ -1,0 +1,3 @@
+- [x] Refactor `ChangePasswordScreen` in `ChangePassScreen.kt` to decouple from ViewModel
+- [x] Update Preview in `ChangePassScreen.kt`
+- [x] Verify fix with `render_compose_preview`

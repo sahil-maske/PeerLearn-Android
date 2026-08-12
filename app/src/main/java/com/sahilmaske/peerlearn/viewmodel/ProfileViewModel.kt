@@ -60,6 +60,17 @@ class ProfileViewModel : ViewModel() {
             }
     }
 
+    fun updatePhoneNumber(phoneNumber: String) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection("users").document(uid)
+            .update("phoneNumber", phoneNumber)
+            .addOnSuccessListener {
+                // The profile listener will pick up changes if active
+            }
+            .addOnFailureListener {
+                _uiState.value = ProfileState.Error(it.message ?: "Failed to update phone number")
+            }
+    }
 
     fun listenUserProfile(uid: String) {
         db.collection("users").document(uid)

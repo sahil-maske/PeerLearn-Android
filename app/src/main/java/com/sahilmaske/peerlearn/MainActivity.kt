@@ -13,6 +13,7 @@ import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
+import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
@@ -145,11 +146,19 @@ fun PeerLearnApp() {
                 onBack = { navController.popBackStack() },
                 onVerifyEmailClick = {
                     navController.navigate("verify_email")
+                },
+                onChangePasswordClick = {
+                    navController.navigate("change_password")
                 }
             )
         }
         composable("verify_email") {
             VerifyEmailScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(route = "change_password") {
+            ChangePasswordScreen(
                 onBack = { navController.popBackStack() }
             )
         }

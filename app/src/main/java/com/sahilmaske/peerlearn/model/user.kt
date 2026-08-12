@@ -12,5 +12,6 @@ data class User(
     val location : String = "",
     val connection : Int = 0,
     val postCount : Int = 0,
-    val helpCount: Int = 0
+    val helpCount: Int = 0,
+    val phoneNumber : String = "",
 )
