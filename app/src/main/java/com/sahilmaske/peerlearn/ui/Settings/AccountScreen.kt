@@ -9,7 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
@@ -239,9 +242,22 @@ fun AccountScreen(
                     letterSpacing = 0.5.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = "Verified",
+                    tint = AppColors.Primary,
+                    modifier = Modifier.size(16.dp)
+
+                )
 
 
             }
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 52.dp),
+                color = AppColors.Divider,
+                thickness = 0.5.dp
+            )
 
 
         Column(
@@ -254,7 +270,7 @@ fun AccountScreen(
             HorizontalDivider(
                 modifier = Modifier.padding(start = 52.dp),
                 color = AppColors.Divider,
-                thickness = 0.5.dp
+                thickness = 0.9.dp
             )
             Row(
                 modifier = Modifier
@@ -285,6 +301,14 @@ fun AccountScreen(
                     color = AppColors.TextSecondary,
                     letterSpacing = 0.5.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = "Verified",
+                    tint = AppColors.Primary,
+                    modifier = Modifier.size(16.dp)
+
                 )
 
             }
@@ -334,13 +358,21 @@ fun AccountScreen(
                     letterSpacing = 0.5.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = "Verified",
+                    tint = AppColors.Primary,
+                    modifier = Modifier.size(16.dp)
+
+                )
 
 
             }
             HorizontalDivider(
                 modifier = Modifier.padding(start = 52.dp),
                 color = AppColors.Divider,
-                thickness = 0.5.dp
+                thickness = 0.9.dp
             )
 
 
@@ -386,6 +418,16 @@ fun AccountScreen(
                         letterSpacing = 0.5.sp,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
+
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = "Verified",
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(16.dp)
+
+                    )
+
                     if (showPhoneDialog) {
                         var phoneInput by remember { mutableStateOf(userProfile?.phoneNumber ?: "") }
 
@@ -499,6 +541,14 @@ fun AccountScreen(
                     color = AppColors.TextSecondary,
                     letterSpacing = 0.5.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = "Verified",
+                    tint = AppColors.Primary,
+                    modifier = Modifier.size(16.dp)
+
                 )
             }
 
