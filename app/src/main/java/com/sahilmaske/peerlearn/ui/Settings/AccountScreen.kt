@@ -19,12 +19,16 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneIphone
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +56,7 @@ import com.sahilmaske.peerlearn.ui.home.ImagePickerDialog
 private val IconBg = Color(0xFFEEEDFE)
 private val IconTint = Color(0xFF534AB7)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onBack: () -> Unit,
@@ -62,6 +67,11 @@ fun AccountScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     var showImagePickerDialog by remember { mutableStateOf(false) }
     var showPhoneDialog by remember { mutableStateOf(false) }
+
+
+    val sheetState = rememberModalBottomSheetState()
+    var showPhoneSheet by remember { mutableStateOf(false) }
+    var phoneInput by remember { mutableStateOf(userProfile?.phoneNumber ?: "") }
 
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPadding: Dp = when {
@@ -302,7 +312,6 @@ fun AccountScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
-
                         .background(IconBg),
                     contentAlignment = Alignment.Center
 
@@ -334,11 +343,13 @@ fun AccountScreen(
                 thickness = 0.5.dp
             )
 
+
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
 //                    .padding(horizontal = horizontalPadding)
-                    .clickable { showPhoneDialog = true }
+                    .clickable { showPhoneSheet = true }
                     .clip(RoundedCornerShape(14.dp))
                     .background(AppColors.Surface)
             ) {
@@ -412,6 +423,43 @@ fun AccountScreen(
 
                 }
             }
+            if (showPhoneSheet){
+                ModalBottomSheet(
+                    onDismissRequest = { showPhoneSheet = false },
+                    sheetState = sheetState,
+                ){
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .navigationBarsPadding()
+                    ) {
+                        Text("Phone Number", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = AppColors.TextPrimary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = phoneInput,
+                            onValueChange = { phoneInput = it },
+                            label = { Text("Enter phone number") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = {
+                                viewModel.updatePhoneNumber(phoneInput)
+                                showPhoneSheet = false
+                            },
+                            modifier  = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Save")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+
         }
         Spacer(modifier = Modifier.height(24.dp))
         Column(
