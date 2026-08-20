@@ -65,6 +65,7 @@ fun AccountScreen(
     onBack: () -> Unit,
     onChangePasswordClick: () -> Unit,
     onVerifyEmailClick: () -> Unit,
+    onLinkAccountClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
@@ -388,7 +389,8 @@ fun AccountScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .clickable{onLinkAccountClick()},
                     verticalAlignment = Alignment.CenterVertically
 
                 ) {
@@ -514,7 +516,8 @@ fun AccountScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clickable{onLinkAccountClick()},
                 verticalAlignment = Alignment.CenterVertically
 
             ) {
@@ -567,5 +570,5 @@ fun AccountScreen(
 @Preview(showBackground = true)
 @Composable
 fun AccountScreenPreview() {
-    AccountScreen(onBack = {}, onVerifyEmailClick = {}, onChangePasswordClick = {})
+    AccountScreen(onBack = {}, onVerifyEmailClick = {}, onChangePasswordClick = {}, onLinkAccountClick = {})
 }

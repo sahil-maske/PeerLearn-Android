@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
+import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
@@ -147,6 +148,9 @@ fun PeerLearnApp() {
                 onVerifyEmailClick = {
                     navController.navigate("verify_email")
                 },
+                onLinkAccountClick = {
+                    navController.navigate("link_accounts")
+                },
                 onChangePasswordClick = {
                     navController.navigate("change_password")
                 }
@@ -159,6 +163,11 @@ fun PeerLearnApp() {
         }
         composable(route = "change_password") {
             ChangePasswordScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("link_accounts") {
+            LinkAccounts(
                 onBack = { navController.popBackStack() }
             )
         }
