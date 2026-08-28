@@ -1,0 +1,82 @@
+[33m296ea64[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Build Privacy screen UI: online status, phone visibility, profile visibility, blocked users, data usage rows with full-row clickable switches
+[33m3a9dd49[m Fix PrivacyScreen colors to use AppColors palette instead of hardcoded values
+[33m57e1d48[m Fix nested clickable bug, show saved phone number and email verification status
+[33m2ca03e1[m Integrate Firestore for linked accounts save and load
+[33m017b632[m Add connection logic for all 4 social platforms with link validation and bottom sheets
+[33m0f5c203[m Add Linked Accounts screen with 4 platform rows and default icons
+[33m2ed9f36[m Add right arrow indicators to account option rows
+[33m3c07812[m Add phone number bottom sheet in AccountScreen with Firestore update
+[33m31a709d[m Fix email field not saving in Firestore user document
+[33m7314763[m Add phone number dialog and update Firestore field
+[33m45ceafb[m Add verify email screen with bounce animation
+[33mfa68403[m Add AccountScreen with email verify, password and phone number rows
+[33m7338d9c[m Add Account screen with email fetch and UI fixes
+[33m9a00d4f[m Make SettingsScreen interactive with per-row callbacks, add responsive layout
+[33m3a9ab89[m Make ProfileScreen responsive across device sizes, fix settings navigation from bottom nav
+[33mc779d48[m Make ProfileScreen responsive for all device sizes, fix settings navigation from bottom nav
+[33me929ed5[m Polish Settings screen UI with destructive action colors
+[33m928275c[m Add Settings screen with navigation wiring
+[33m7a9ed96[m Add skill-based icebreaker message on connection accept
+[33m6ba3be5[m Add skill-based icebreaker message on connection accept
+[33mc2cae8e[m checkpoint before opencode bug fix pass
+[33m2f9c41e[m feat: smart auto-scroll - only scroll near bottom or on own message
+[33m50085ea[m fix: keyboard overlap in chat input + auto-scroll to latest message
+[33m9fc6c42[m Fix: remove duplicate chat_conversation route causing back button to go to home
+[33me9a9c4f[m Add fallback avatar placeholder when profile photo is missing
+[33ma0521ed[m Replace dummy conversation list with real Firestore fetch + peer name/avatar
+[33mee38ef7[m Add ChatConversationScreen with responsive layout and status bar fix
+[33m516eb36[m Add click navigation from conversation card to ChatConversationScreen
+[33m8803a23[m Add ChatConversationScreen with ViewModel integration and navigation
+[33m6579217[m Make NotificationScreen responsive with adaptive top bar and breakpoint-based layout for phone/tablet
+[33m7cc29dd[m Add Need Help as third post intent option alongside Teach/Learn
+[33mc46c7dd[m Add isMarkedHelpful flag to Comment model for Need Help feature
+[33mda1bb0b[m Make post count and connection count real-time, calculated live from Firestore instead of manual counters
+[33mcb4032b[m Fix connection request flow: swipe bug, Timestamp crash, wire Alerts tab, real-time post count
+[33m59141c7[m Design and implement the notification screen
+[33m4f581d1[m Fix bottom navigation UI and improve layout
+[33m258a985[m feat: add ChatScreen with ViewModel, search bar, and conversation list UI
+[33mef34224[m Add working like and comment functionality to community feed
+[33m613fdc6[m Replace loading spinner with bouncing dots loader animation
+[33mfd0d3d0[m Fix duplicate label on photo section, refine PostScreen UI
+[33mb9710ee[m WIP: PostScreen sections before LazyColumn refactor
+[33m95f01c0[m Add tags section UI - add tag button
+[33m49e35d7[m Fix intent toggle indicator width and color
+[33m81c60df[m Add Post Screen top Bar UI
+[33m810f3fd[m feat: implement liquid glass bottom navigation bar
+[33m4015a1f[m Update HomeScreen UI: add greeting, bottom nav, restyle post & peer cards
+[33m02f91a1[m polish: ProfileScreen spacing, avatar border, proper dividers, and location fallback
+[33m8b027ce[m refactor: remove redundant skill display from ProfileScreen, show location instead
+[33m6ba73bc[m fix: resolve Firestore permission issue, real device data sync, and make full PeerRowCard clickable for navigation
+[33mce78c21[m fix: correct SeeAllPeersScreen padding, spacing, and top bar UX
+[33m1229149[m polish: iOS-style refinement for PeerRowCard, fix modifier order and spacing
+[33m797143c[m feat: add PeerRowCard with avatar, know/learn skills, message icon, and connect button
+[33m9af4967[m polish: fix avatar size mismatch, add inner padding, display skill and match %
+[33m29d5ec3[m feat: wire real peer suggestions into HomeScreen with LazyRow
+[33mf2f7dc4[m feat: add PeerSuggestionCard with real Firestore data, avatar fallback, and skill-match percentage logic
+[33m8d411f5[m feat: add FeedScreen with greeting, notification icon, and suggested peers section
+[33m0a2aad7[m[33m ([m[1;32mfeature/animated-bottom-nav[m[33m)[m feat: add home screen top bar with greeting and notification icon
+[33mbadbc59[m feat: add home screen top bar with greeting and notification icon
+[33m0b7c0b1[m[33m ([m[1;31morigin/feature/animated-bottom-nav[m[33m)[m feat: custom animated bottom nav with transparent glassmorphism style
+[33mefed10a[m Update README.md
+[33m178ff38[m Create README.md
+[33m292c030[m Update UI colors and theme
+[33m5c1bf8f[m feat: avatar upload with Cloudinary - square crop, compression
+[33mbcde559[m fix: Cloudinary upload & avatar save to Firestore
+[33m26af147[m feat: camera & gallery picker, FileProvider setup
+[33mbe7d6f2[m feat: ProfileScreen complete - avatar, skills dialog, posts grid, bottom sheet
+[33macad32b[m feat: ProfileScreen - skills cards with dialog
+[33mb78beb5[m feat: transparent glass bottom nav, ProfileScreen UI
+[33mdceb815[m feat: add complete profile screen with stats, skills and posts section
+[33m276efe3[m Add stats card, edit profile button, and skill chips to ProfileScreen
+[33meac7761[m eat: add profile screen layout with user details and stats
+[33m181831c[m Add ProfileScreen - top bar, avatar, name, college
+[33m10516b8[m Add ProfileScreen with Firestore data fetch
+[33m9df5f32[m feat: add fetchProfile function in ProfileViewModel
+[33mafdae0b[m feat: update ProfileSetupScreen with new User model
+[33mac56531[m feat: update User data model
+[33m69d2d1f[m Polish bottom navigation - transparent, rounded, no indicator
+[33mf79d894[m Add Bottom Navigation with Feed, Connect, QA, Chat, Profile tabs
+[33mfa7160d[m Add Home screens - Feed, Connect, QA, Chat, Profile
+[33m5a42509[m Add ProfileSetup screen with Firestore integration
+[33m09e5990[m[33m ([m[1;31morigin/master[m[33m)[m Initial commit - Auth complete (Login, Register, Navigation)
+[33m6cc9be3[m Initial commit

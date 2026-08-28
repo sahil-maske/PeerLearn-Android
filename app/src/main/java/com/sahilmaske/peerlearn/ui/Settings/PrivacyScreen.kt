@@ -1,60 +1,52 @@
 package com.sahilmaske.peerlearn.ui.Settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 
-// Purple icon badge colors — same as AccountScreen
+// Purple icon badge colors — same language as AccountScreen
 private val IconBg = Color(0xFFEEEDFE)
 private val IconTint = Color(0xFF534AB7)
 
 @Composable
-fun PrivacyScreen(onBack: () -> Unit) {
-    val isPreview = LocalInspectionMode.current
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val horizontalPadding: Dp = when {
-        screenWidthDp < 600 -> 16.dp
-        screenWidthDp < 840 -> 28.dp
-        else -> 40.dp
-    }
+fun PrivacyScreen(
+    onBack: () -> Unit,
+    onProfileVisibilityClick: () -> Unit = {},
+    onBlockedUsersClick: () -> Unit = {},
+    onDataUsageClick: () -> Unit = {}
+) {
 
-    val currentUserEmail = remember {
-        if (isPreview) "sample@email.com" else FirebaseAuth.getInstance().currentUser?.email
-    }
+    // abhi ke liye local state, baad mein ViewModel se aayega jaise hideOnlineStatus User.kt mein hai
+    var hideOnlineStatus by remember { mutableStateOf(false) }
+    var showPhoneToConnections by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -64,6 +56,7 @@ fun PrivacyScreen(onBack: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
+        // Top bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,16 +82,14 @@ fun PrivacyScreen(onBack: () -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.Background),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            // Header section — shield icon + title + subtitle
             item {
                 Spacer(modifier = Modifier.height(24.dp))
-            }
 
-            // privacy content here
-            item {
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -133,27 +124,26 @@ fun PrivacyScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )
 
-            }
-            item {
                 Spacer(modifier = Modifier.height(24.dp))
             }
-            item {
 
+            // Card 1: Hide Online Status, Profile Visibility, Phone Number, Blocked Users
+            item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = horizontalPadding)
                         .clip(RoundedCornerShape(14.dp))
                         .background(AppColors.Surface)
                 ) {
 
+                    // Row 1: Hide Online Status
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable { hideOnlineStatus = !hideOnlineStatus }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
@@ -162,10 +152,10 @@ fun PrivacyScreen(onBack: () -> Unit) {
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.Email,
-                                contentDescription = "user e-mail",
+                                Icons.Default.VisibilityOff,
+                                contentDescription = "Hide Online Status",
                                 tint = IconTint,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                         Text(
@@ -174,25 +164,216 @@ fun PrivacyScreen(onBack: () -> Unit) {
                             fontWeight = FontWeight.Medium,
                             color = AppColors.TextSecondary,
                             letterSpacing = 0.5.sp,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 20.dp)
                         )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = "Verified",
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(16.dp)
-
+                        Switch(
+                            checked = hideOnlineStatus,
+                            onCheckedChange = { hideOnlineStatus = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppColors.Surface,
+                                checkedTrackColor = AppColors.Primary
+                            )
                         )
-
-
                     }
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 52.dp),
                         color = AppColors.Divider,
                         thickness = 0.5.dp
                     )
+
+                    // Row 2: Profile Visibility
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onProfileVisibilityClick() }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Profile Visibility",
+                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = "PROFILE VISIBILITY",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 20.dp)
+                        )
+                        Text(
+                            text = "Everyone",
+                            fontSize = 13.sp,
+                            color = AppColors.TextSecondary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 52.dp),
+                        color = AppColors.Divider,
+                        thickness = 0.5.dp
+                    )
+
+                    // Row 3: Show Phone Number to Connections
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showPhoneToConnections = !showPhoneToConnections }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Phone,
+                                contentDescription = "Show Phone Number",
+                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = "SHOW PHONE NUMBER TO CONNECTIONS",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 20.dp)
+                        )
+                        Switch(
+                            checked = showPhoneToConnections,
+                            onCheckedChange = { showPhoneToConnections = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppColors.Surface,
+                                checkedTrackColor = AppColors.Primary
+                            )
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 52.dp),
+                        color = AppColors.Divider,
+                        thickness = 0.5.dp
+                    )
+
+                    // Row 4: Blocked Users
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onBlockedUsersClick() }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Block,
+                                contentDescription = "Blocked Users",
+                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = "BLOCKED USERS",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 20.dp)
+                        )
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // Card 2: Data Usage
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(AppColors.Surface)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDataUsageClick() }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "Data Usage",
+                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = "DATA USAGE",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 20.dp)
+                        )
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
