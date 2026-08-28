@@ -15,6 +15,7 @@ import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
 import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
+import com.sahilmaske.peerlearn.ui.Settings.PrivacyScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
@@ -134,6 +135,7 @@ fun PeerLearnApp() {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onAccountClick = { navController.navigate("account") },
+                onPrivacyClick = { navController.navigate("privacy") },
                 onLogoutClick = {
                     FirebaseAuth.getInstance().signOut()
                     navController.navigate("login") {
@@ -171,5 +173,12 @@ fun PeerLearnApp() {
                 onBack = { navController.popBackStack() }
             )
         }
+        composable("privacy") {
+            PrivacyScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
     }
-    }
+}

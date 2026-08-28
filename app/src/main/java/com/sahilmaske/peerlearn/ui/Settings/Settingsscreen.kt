@@ -44,6 +44,7 @@ import com.sahilmaske.peerlearn.ui.theme.AppColors
 fun SettingsScreen(
     onBack: () -> Unit,
     onAccountClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     // ---- DEVICE COMPATIBILITY: screen width check ----
@@ -97,12 +98,11 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .then(
-                    // agar contentMaxWidth set hai (tablet), to width usi tak limit karo
-                    // warna (phone pe) poori width le lo
+
                     if (contentMaxWidth != Dp.Unspecified) Modifier.widthIn(max = contentMaxWidth)
                     else Modifier.fillMaxWidth()
                 )
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
             // ---- Top Bar ----
 
@@ -170,6 +170,9 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.weight(1f))
                 }
+
+
+
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 52.dp),
                     color = AppColors.Divider,
@@ -180,43 +183,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .clickable { /* TODO: Notifications */ }
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
-                            .background(iconBg),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Text(
-                        text = "NOTIFICATIONS",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = AppColors.TextSecondary,
-                        letterSpacing = 0.5.sp,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 52.dp),
-                    color = AppColors.Divider,
-                    thickness = 0.5.dp
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(rowHeight)
-                        .clickable { /* TODO: Privacy */ }
+                        .clickable { onPrivacyClick() }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -399,6 +366,7 @@ fun SettingsScreenPreviewPhone() {
     SettingsScreen(
         onBack = {},
         onAccountClick = {},
+        onPrivacyClick = {},
         onLogoutClick = {}
     )
 }
@@ -409,6 +377,7 @@ fun SettingsScreenPreviewTablet() {
     SettingsScreen(
         onBack = {},
         onAccountClick = {},
+        onPrivacyClick = {},
         onLogoutClick = {}
     )
 }

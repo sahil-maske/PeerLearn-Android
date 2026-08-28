@@ -89,7 +89,7 @@ fun AccountScreen(
         else -> 40.dp
     }
 
-    val currentUserEmail = remember {
+     val currentUserEmail = remember {
         if (isPreview) "sample@email.com" else FirebaseAuth.getInstance().currentUser?.email
     }
 
