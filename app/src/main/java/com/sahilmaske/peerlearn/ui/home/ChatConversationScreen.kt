@@ -33,11 +33,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.model.Message
+import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ChatConversationViewModel
 import com.sahilmaske.peerlearn.viewmodel.PeerInfo
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun ChatConversationScreen(
@@ -56,6 +58,7 @@ fun ChatConversationScreen(
 
     val peerInfo by viewModel.peerInfo.collectAsState()
     val messages by viewModel.messages.collectAsState()
+    val otherUserPresence by viewModel.otherUserPresence.collectAsState() // NEW
     val currentUserId = remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid) }
 
     DisposableEffect(Unit) {
@@ -69,6 +72,7 @@ fun ChatConversationScreen(
 
     ChatConversationContent(
         peerInfo = peerInfo,
+        presence = otherUserPresence, // NEW
         messages = messages,
         currentUserId = currentUserId.value,
         onBack = onBack,
@@ -80,6 +84,7 @@ fun ChatConversationScreen(
 @Composable
 fun ChatConversationContent(
     peerInfo: PeerInfo,
+    presence: User? = null, // NEW (default null taaki preview mein bhi chale)
     messages: List<Message>,
     currentUserId: String?,
     onBack: () -> Unit,
@@ -103,6 +108,7 @@ fun ChatConversationContent(
     ) {
         ChatTopBar(
             peerInfo = peerInfo,
+            presence = presence, // NEW
             onBack = onBack,
             onProfileClick = onProfileClick
         )
@@ -133,6 +139,7 @@ fun ChatConversationContent(
 @Composable
 fun ChatTopBar(
     peerInfo: PeerInfo,
+    presence: User? = null, // NEW
     onBack: () -> Unit,
     onProfileClick: () -> Unit
 ) {
@@ -179,14 +186,24 @@ fun ChatTopBar(
 
         Spacer(modifier = Modifier.width(10.dp))
 
-        Text(
-            text = peerInfo.name.ifBlank { "Unknown User" },
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 17.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
+        // NEW: Name + status ek Column mein (subtitle ke liye)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = peerInfo.name.ifBlank { "Unknown User" },
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 17.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            val status = presenceStatusText(presence)
+            if (status.isNotBlank()) {
+                Text(
+                    text = status,
+                    fontSize = 12.sp,
+                    color = if (presence?.isOnline == true) Color(0xFF0F6E6E) else Color.Gray
+                )
+            }
+        }
     }
 }
 
@@ -228,7 +245,7 @@ fun MessageInputBar(onSendMessage: (String) -> Unit) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextField(
+        OutlinedTextField(
             value = text,
             onValueChange = { text = it },
             modifier = Modifier
@@ -236,11 +253,9 @@ fun MessageInputBar(onSendMessage: (String) -> Unit) {
                 .heightIn(min = 44.dp),
             placeholder = { Text("Message", color = AppColors.TextSecondary) },
             shape = RoundedCornerShape(22.dp),
-            colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = AppColors.Surface,
-                focusedContainerColor = AppColors.Surface,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF534AB7), // tera purple theme color
+                unfocusedBorderColor = Color.Gray
             ),
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onDone = {
@@ -279,11 +294,32 @@ private fun formatTimestamp(timestamp: Long): String {
     return SimpleDateFormat("HH:mm", Locale.getDefault()).format(timestamp)
 }
 
+// NEW: presence ko readable status text mein convert karta hai
+private fun presenceStatusText(presence: User?): String {
+    if (presence == null) return ""
+    if (presence.hideOnlineStatus) return ""
+    if (presence.isOnline) return "Online"
+    if (presence.lastSeen <= 0L) return ""
+
+    val diffMillis = System.currentTimeMillis() - presence.lastSeen
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis)
+    val hours = TimeUnit.MILLISECONDS.toHours(diffMillis)
+    val days = TimeUnit.MILLISECONDS.toDays(diffMillis)
+
+    return when {
+        minutes < 1 -> "Last seen just now"
+        minutes < 60 -> "Last seen $minutes min ago"
+        hours < 24 -> "Last seen $hours hr ago"
+        else -> "Last seen $days d ago"
+    }
+}
+
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 fun ChatConversationScreenPreview() {
     ChatConversationContent(
         peerInfo = PeerInfo(name = "Sarah Jenkins", avatarUrl = ""),
+        presence = User(isOnline = true), // NEW: preview ke liye dummy presence
         messages = listOf(
             Message(senderId = "other", text = "Hi! I saw your request for a swap 😊", timestamp = System.currentTimeMillis()),
             Message(senderId = "me", text = "That's awesome! I'd love that.", timestamp = System.currentTimeMillis())

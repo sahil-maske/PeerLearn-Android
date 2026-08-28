@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
 class ChatViewModel : ViewModel() {
 
     private val db = Firebase.firestore
@@ -23,6 +23,9 @@ class ChatViewModel : ViewModel() {
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
+
+    // otherUid -> presence listener, taaki duplicate listener na lage
+    private val presenceListeners = mutableMapOf<String, ListenerRegistration>()
 
     init {
         listenToConversations()
@@ -49,16 +52,19 @@ class ChatViewModel : ViewModel() {
                             val userDoc = db.collection("users").document(otherUid).get().await()
                             val name = userDoc.getString("name") ?: "Unknown"
                             val avatarUrl = userDoc.getString("avatarUrl") ?: ""
+                            val isOnline = userDoc.getBoolean("isOnline") ?: false
 
                             val lastMessage = doc.getString("lastMessage") ?: ""
                             val timestamp = doc.getLong("timestamp") ?: 0L
 
                             Conversation(
                                 id = doc.id,
+                                otherUid = otherUid,
                                 name = name,
                                 avatarUrl = avatarUrl,
                                 lastMessage = lastMessage,
-                                time = formatTime(timestamp)
+                                time = formatTime(timestamp),
+                                isOnline = isOnline
                             )
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -66,13 +72,41 @@ class ChatViewModel : ViewModel() {
                         }
                     }
                     _conversations.value = resolvedList
+
+                    // 👇 ab har otherUid pe real-time presence listener attach karo
+                    resolvedList.forEach { convo ->
+                        attachPresenceListener(convo.otherUid)
+                    }
                 }
             }
+    }
+
+    private fun attachPresenceListener(otherUid: String) {
+        if (presenceListeners.containsKey(otherUid)) return // already listening
+
+        val listener = db.collection("users").document(otherUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val isOnline = snapshot.getBoolean("isOnline") ?: false
+
+                // current list mein us user ka isOnline update karo
+                _conversations.value = _conversations.value.map { convo ->
+                    if (convo.otherUid == otherUid) convo.copy(isOnline = isOnline) else convo
+                }
+            }
+
+        presenceListeners[otherUid] = listener
     }
 
     private fun formatTime(timestamp: Long): String {
         if (timestamp == 0L) return ""
         val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
         return sdf.format(Date(timestamp))
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        presenceListeners.values.forEach { it.remove() }
+        presenceListeners.clear()
     }
 }

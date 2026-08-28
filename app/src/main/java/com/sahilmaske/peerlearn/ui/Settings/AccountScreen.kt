@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 import com.sahilmaske.peerlearn.ui.home.ImagePickerDialog
@@ -68,6 +69,10 @@ fun AccountScreen(
     onLinkAccountClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
+    val isPreview = LocalInspectionMode.current
+    val isEmailVerified = remember(isPreview) {
+        if (isPreview) true else FirebaseAuth.getInstance().currentUser?.isEmailVerified ?: false
+    }
     val userProfile by viewModel.userProfile.collectAsState()
     var showImagePickerDialog by remember { mutableStateOf(false) }
     var showPhoneDialog by remember { mutableStateOf(false) }
@@ -84,7 +89,6 @@ fun AccountScreen(
         else -> 40.dp
     }
 
-    val isPreview = LocalInspectionMode.current
     val currentUserEmail = remember {
         if (isPreview) "sample@email.com" else FirebaseAuth.getInstance().currentUser?.email
     }
@@ -296,10 +300,13 @@ fun AccountScreen(
                     )
                 }
                 Text(
-                    text = "VERIFY EMAIL",
+                    text = if (isEmailVerified) User.STATUS_VERIFIED else
+                        User.STATUS_NOT_VERIFIED,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = AppColors.TextSecondary,
+                    color = if (isEmailVerified)
+                        Color(0xFF2E7D32)
+                    else Color(0xFFC62828),
                     letterSpacing = 0.5.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
@@ -389,8 +396,7 @@ fun AccountScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .clickable{onLinkAccountClick()},
+                        .padding(horizontal = 16.dp, vertical = 12.dp) ,
                     verticalAlignment = Alignment.CenterVertically
 
                 ) {
@@ -413,7 +419,7 @@ fun AccountScreen(
                     }
 
                     Text(
-                        text = "PHONE NUMBER",
+                        text = userProfile?.phoneNumber?.takeIf { it.isNotBlank() } ?: "PHONE NUMBER",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = AppColors.TextSecondary,

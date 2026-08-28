@@ -1,0 +1,3 @@
+- [x] Update `libs.versions.toml` to include `firebase-messaging`
+- [x] Clean up `app/build.gradle.kts` to use Version Catalog for Firebase Messaging and remove redundant BoM lines
+- [/] Run Gradle build to verify fix

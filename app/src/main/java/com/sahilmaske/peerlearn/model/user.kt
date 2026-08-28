@@ -1,5 +1,7 @@
 package com.sahilmaske.peerlearn.model
 
+import com.google.firebase.firestore.PropertyName
+
 data class User(
     val uid : String = "",
     val name : String = "",
@@ -15,5 +17,15 @@ data class User(
     val helpCount: Int = 0,
     val phoneNumber : String = "",
     val email : String = "",
-    val linkedAccounts: Map<String, String> = emptyMap()
-)
+    @get:PropertyName("isEmailVerified")
+    val isEmailVerified : Boolean = false,
+    val linkedAccounts: Map<String, String> = emptyMap(),
+    val isOnline: Boolean = false,
+    val lastSeen: Long = 0L,        // ya Timestamp, jo bhi convention already use ho raha hai tumhare model mein
+    val hideOnlineStatus: Boolean = false
+) {
+    companion object {
+        const val STATUS_VERIFIED = "VERIFIED"
+        const val STATUS_NOT_VERIFIED = "EMAIL NOT VERIFIED"
+    }
+}

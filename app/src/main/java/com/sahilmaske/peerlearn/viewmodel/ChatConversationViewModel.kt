@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.sahilmaske.peerlearn.model.Message
+import com.sahilmaske.peerlearn.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,6 +32,12 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages
 
+    private val _otherUserPresence = MutableStateFlow<User?>(null)
+    val otherUserPresence: StateFlow<User?> = _otherUserPresence
+
+    // NEW: presence listener ko reference store karna hai taaki onCleared() mein remove kar sake
+    private var presenceListener: ListenerRegistration? = null
+
     init {
         loadConversationAndPeer()
         listenToMessages()
@@ -40,16 +48,12 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
             try {
                 val convoDoc = db.collection("conversations").document(chatId).get().await()
 
-                // Doc pehle se exist karta hai (participants field milegi)
                 val existingParticipants = convoDoc.get("participants") as? List<*>
                 val skillContext = convoDoc.getString("skillContext") ?: ""
 
                 val otherUid = if (existingParticipants != null) {
-                    // Case 1: conversation doc already ban chuka hai
                     existingParticipants.firstOrNull { it != currentUid } as? String
                 } else {
-                    // Case 2: doc abhi tak exist hi nahi karta (naya user, pehla message abhi tak nahi bheja)
-                    // chatId khud deterministic hai: "${uid1}_${uid2}" (sorted) -> usi se doosra uid nikal lo
                     chatId.split("_").firstOrNull { it != currentUid }
                 }
 
@@ -62,10 +66,22 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
                     avatarUrl = userDoc.getString("avatarUrl") ?: "",
                     skillContext = skillContext
                 )
+
+                // NEW: peer ka uid mil gaya, ab uska presence sunna start karo
+                listenToPeerPresence(otherUid)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    // NEW FUNCTION: other user ke presence document ko real-time sunta hai
+    private fun listenToPeerPresence(otherUid: String) {
+        presenceListener = db.collection("users").document(otherUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                _otherUserPresence.value = snapshot.toObject(User::class.java)
+            }
     }
 
     private fun listenToMessages() {
@@ -82,7 +98,7 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
         if (text.isBlank() || currentUid.isBlank()) return
 
         val peerUid = _peerInfo.value.uid
-        if (peerUid.isBlank()) return // peer resolve nahi hua abhi tak, message mat bhejo
+        if (peerUid.isBlank()) return
 
         val message = hashMapOf(
             "senderId" to currentUid,
@@ -92,9 +108,6 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
         val convoRef = db.collection("conversations").document(chatId)
         convoRef.collection("messages").add(message)
 
-        // FIX: .update() ki jagah .set() + merge — agar doc exist nahi karta to
-        // "participants" field ke saath naya bana dega, agar exist karta hai to
-        // sirf ye fields update karega (poora doc overwrite nahi hoga)
         convoRef.set(
             mapOf(
                 "participants" to listOf(currentUid, peerUid),
@@ -103,5 +116,11 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
             ),
             SetOptions.merge()
         )
+    }
+
+    // NEW: listener ko clean karo jab ViewModel destroy ho, warna memory leak hoga
+    override fun onCleared() {
+        super.onCleared()
+        presenceListener?.remove()
     }
 }
