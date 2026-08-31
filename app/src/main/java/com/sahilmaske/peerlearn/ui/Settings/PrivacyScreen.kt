@@ -30,7 +30,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.ui.theme.PeerLearnTheme
+import com.sahilmaske.peerlearn.viewmodel.PrivacyUiState
+import com.sahilmaske.peerlearn.viewmodel.PrivacyViewModel
 
 // Purple icon badge colors — same language as AccountScreen
 private val IconBg = Color(0xFFEEEDFE)
@@ -41,13 +45,32 @@ fun PrivacyScreen(
     onBack: () -> Unit,
     onProfileVisibilityClick: () -> Unit = {},
     onBlockedUsersClick: () -> Unit = {},
-    onDataUsageClick: () -> Unit = {}
+    onDataUsageClick: () -> Unit = {},
+    viewModel: PrivacyViewModel = viewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
 
-    // abhi ke liye local state, baad mein ViewModel se aayega jaise hideOnlineStatus User.kt mein hai
-    var hideOnlineStatus by remember { mutableStateOf(false) }
-    var showPhoneToConnections by remember { mutableStateOf(false) }
+    PrivacyScreenContent(
+        uiState = uiState,
+        onBack = onBack,
+        onProfileVisibilityClick = onProfileVisibilityClick,
+        onBlockedUsersClick = onBlockedUsersClick,
+        onDataUsageClick = onDataUsageClick,
+        onHideOnlineStatusChange = { viewModel.updateHideOnlineStatus(it) },
+        onShowPhoneNumberChange = { viewModel.updateShowPhoneNumber(it) }
+    )
+}
 
+@Composable
+fun PrivacyScreenContent(
+    uiState: PrivacyUiState,
+    onBack: () -> Unit,
+    onProfileVisibilityClick: () -> Unit = {},
+    onBlockedUsersClick: () -> Unit = {},
+    onDataUsageClick: () -> Unit = {},
+    onHideOnlineStatusChange: (Boolean) -> Unit = {},
+    onShowPhoneNumberChange: (Boolean) -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -140,7 +163,7 @@ fun PrivacyScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { hideOnlineStatus = !hideOnlineStatus }
+                            .clickable { onHideOnlineStatusChange(!uiState.hideOnlineStatus) }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -169,8 +192,8 @@ fun PrivacyScreen(
                                 .padding(horizontal = 20.dp)
                         )
                         Switch(
-                            checked = hideOnlineStatus,
-                            onCheckedChange = { hideOnlineStatus = it },
+                            checked = uiState.hideOnlineStatus,
+                            onCheckedChange = onHideOnlineStatusChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = AppColors.Surface,
                                 checkedTrackColor = AppColors.Primary
@@ -216,7 +239,7 @@ fun PrivacyScreen(
                                 .padding(horizontal = 20.dp)
                         )
                         Text(
-                            text = "Everyone",
+                            text = uiState.profileVisibility,
                             fontSize = 13.sp,
                             color = AppColors.TextSecondary
                         )
@@ -238,7 +261,7 @@ fun PrivacyScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showPhoneToConnections = !showPhoneToConnections }
+                            .clickable { onShowPhoneNumberChange(!uiState.showPhoneNumber) }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -267,8 +290,8 @@ fun PrivacyScreen(
                                 .padding(horizontal = 20.dp)
                         )
                         Switch(
-                            checked = showPhoneToConnections,
-                            onCheckedChange = { showPhoneToConnections = it },
+                            checked = uiState.showPhoneNumber,
+                            onCheckedChange = onShowPhoneNumberChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = AppColors.Surface,
                                 checkedTrackColor = AppColors.Primary
@@ -381,6 +404,21 @@ fun PrivacyScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun PrivacySettingPreview() {
-    PrivacyScreen(onBack = {})
+fun PrivacyScreenPreview() {
+    val sampleState = PrivacyUiState(
+        hideOnlineStatus = false,
+        showPhoneNumber = true,
+        profileVisibility = "Everyone"
+    )
+    PeerLearnTheme {
+        PrivacyScreenContent(
+            uiState = sampleState,
+            onBack = {},
+            onProfileVisibilityClick = {},
+            onBlockedUsersClick = {},
+            onDataUsageClick = {},
+            onHideOnlineStatusChange = {},
+            onShowPhoneNumberChange = {}
+        )
+    }
 }

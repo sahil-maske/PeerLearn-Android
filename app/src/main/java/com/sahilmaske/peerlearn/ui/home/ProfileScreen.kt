@@ -1,5 +1,6 @@
 package com.sahilmaske.peerlearn.ui.home
 
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -19,14 +20,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,16 +72,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.math.max
 import kotlin.math.min
 
-// ---------- Screen size categories (Material3 standard breakpoints) ----------
-// COMPACT = phones, MEDIUM = small tablets/foldables, EXPANDED = large tablets
+// Screen size buckets, based on Material3's standard width breakpoints.
+// COMPACT = phones, MEDIUM = small tablets/foldables, EXPANDED = large tablets.
 enum class ProfileScreenSize { COMPACT, MEDIUM, EXPANDED }
 
 @Composable
 private fun rememberProfileScreenSize(): ProfileScreenSize {
-    val widthDp = LocalConfiguration.current.screenWidthDp
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
     return when {
-        widthDp < 600 -> ProfileScreenSize.COMPACT
-        widthDp < 840 -> ProfileScreenSize.MEDIUM
+        screenWidthDp < 600 -> ProfileScreenSize.COMPACT
+        screenWidthDp < 840 -> ProfileScreenSize.MEDIUM
         else -> ProfileScreenSize.EXPANDED
     }
 }
@@ -90,12 +96,13 @@ fun ProfileScreen(
     onBack: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
-    // ---- State & Data ----
-    val userProfileFromVM by viewModel.userProfile.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    // ---------------- Profile data ----------------
+    val profileFromFirestore by viewModel.userProfile.collectAsState()
+    val profileLoadState by viewModel.uiState.collectAsState()
 
     val isPreview = LocalInspectionMode.current
 
+    // In Android Studio's @Preview, skip Firestore entirely and show fake data instead.
     val userProfile = if (isPreview) {
         User(
             uid = "preview_uid",
@@ -111,68 +118,68 @@ fun ProfileScreen(
             helpCount = 45
         )
     } else {
-        userProfileFromVM
+        profileFromFirestore
     }
 
-    // Fetch current user profile on first launch
+    // Load the profile (and start listening for its live post count) the first time
+    // this screen appears, or whenever a different uid is passed in.
     LaunchedEffect(uid) {
         if (isPreview) return@LaunchedEffect
-        val targetUid = uid ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
-        viewModel.fetchUserProfile(targetUid)
-        viewModel.listenPostCount(targetUid) // NEW: real-time count from actual posts, not a stale counter field
+        val profileUidToLoad = uid ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
+        viewModel.fetchUserProfile(profileUidToLoad)
+        viewModel.listenPostCount(profileUidToLoad) // real-time count from actual posts, not a stale counter field
     }
 
-
-    val currentUserUid = remember {
+    val loggedInUid = remember {
         mutableStateOf(if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid)
     }
-    // Observe auth state changes
+    // Keep loggedInUid in sync if the user signs in/out while this screen is open.
     DisposableEffect(Unit) {
         if (!isPreview) {
             val auth = FirebaseAuth.getInstance()
-            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-                currentUserUid.value = firebaseAuth.currentUser?.uid
+            val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                loggedInUid.value = firebaseAuth.currentUser?.uid
             }
-            auth.addAuthStateListener(listener)
-            onDispose { auth.removeAuthStateListener(listener) }
+            auth.addAuthStateListener(authListener)
+            onDispose { auth.removeAuthStateListener(authListener) }
         } else {
             onDispose {}
         }
     }
-    val isOwnProfile = uid == null || uid == currentUserUid.value
+    val isViewingOwnProfile = uid == null || uid == loggedInUid.value
 
-    // ---- Connection state (only relevant for other users' profiles) ----
+    // ---------------- Connection state (only matters when viewing someone else's profile) ----------------
     val connectionStatus by connectionViewModel.connectionStatus.collectAsState()
 
-    // NEW: live post count from the real posts collection (see ProfileViewModel.listenPostCount)
+    // Live post count from the real posts collection (see ProfileViewModel.listenPostCount).
     val postCount by viewModel.postCount.collectAsState()
 
-    // NEW: live connection count from the real connections collection
+    // Live connection count from the real connections collection.
     val connectionCount by connectionViewModel.connectionCount.collectAsState()
 
-    // NEW: local flag for instant "Request Sent" feedback right after swipe,
-    // before the Firestore listener catches up and connectionStatus becomes "pending"
-    var justSentRequest by remember { mutableStateOf(false) }
+    // Shows "Request Sent" immediately after the swipe action succeeds, before the
+    // Firestore listener below has a chance to update connectionStatus to "pending".
+    var requestJustSent by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uid, currentUserUid.value) {
+    LaunchedEffect(uid, loggedInUid.value) {
         if (isPreview) return@LaunchedEffect
-        val targetUid = uid ?: currentUserUid.value ?: return@LaunchedEffect
-        connectionViewModel.listenConnectionCount(targetUid) // NEW: live count for whichever profile is shown
+        val profileUidToWatch = uid ?: loggedInUid.value ?: return@LaunchedEffect
+        connectionViewModel.listenConnectionCount(profileUidToWatch) // live count for whichever profile is shown
 
-        if (isOwnProfile) return@LaunchedEffect
-        val myUid = currentUserUid.value ?: return@LaunchedEffect
-        connectionViewModel.listenConnectionStatus(myUid, targetUid)
+        if (isViewingOwnProfile) return@LaunchedEffect
+        val myUid = loggedInUid.value ?: return@LaunchedEffect
+        connectionViewModel.listenConnectionStatus(myUid, profileUidToWatch)
     }
 
-    // Once the real listener confirms "pending" (or beyond), drop the temporary flag
-    // so the permanent "Request Pending" / "Message" state takes over cleanly.
+    // Once the real Firestore listener confirms "pending" (or beyond), drop the
+    // temporary flag so the permanent "Request Pending" / "Message" state takes over.
     LaunchedEffect(connectionStatus) {
         if (connectionStatus == "pending" || connectionStatus == "accepted") {
-            justSentRequest = false
+            requestJustSent = false
         }
     }
 
-    // ---- Responsive sizing (COMPACT / MEDIUM / EXPANDED) ----
+    // ---------------- Responsive sizing (COMPACT / MEDIUM / EXPANDED) ----------------
     val screenSize = rememberProfileScreenSize()
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp.dp
@@ -187,7 +194,7 @@ fun ProfileScreen(
             ProfileScreenSize.EXPANDED -> 170.dp
         }
     }
-    // Horizontal padding scales per breakpoint
+    // Horizontal padding scales per breakpoint.
     val horizontalPadding = remember(screenWidthDp, screenSize) {
         when (screenSize) {
             ProfileScreenSize.COMPACT -> max(12.dp.value, min(20.dp.value, screenWidthDp.value * 0.045f)).dp
@@ -202,13 +209,13 @@ fun ProfileScreen(
         ProfileScreenSize.MEDIUM -> 620.dp
         ProfileScreenSize.EXPANDED -> 760.dp
     }
-    // Posts grid column count per breakpoint
-    val postColumns = when (screenSize) {
+    // Posts grid column count per breakpoint.
+    val postGridColumns = when (screenSize) {
         ProfileScreenSize.COMPACT -> 2
         ProfileScreenSize.MEDIUM -> 3
         ProfileScreenSize.EXPANDED -> 4
     }
-    // Name/title font sizes scale up slightly on larger screens for visual balance
+    // Name/college font sizes scale up slightly on larger screens for visual balance.
     val nameFontSize = when (screenSize) {
         ProfileScreenSize.COMPACT -> 24.sp
         ProfileScreenSize.MEDIUM -> 26.sp
@@ -220,48 +227,51 @@ fun ProfileScreen(
         ProfileScreenSize.EXPANDED -> 19.sp
     }
 
-    // Dialog/sheet states
-    var selectedSkillType by remember { mutableStateOf<String?>(null) }
-    var selectedPost by remember { mutableStateOf<Post?>(null) }
+    // ---------------- Dialog / bottom-sheet state ----------------
+    var selectedSkillType by remember { mutableStateOf<String?>(null) }   // "learning" or "known", or null when no dialog is open
+    var selectedPost by remember { mutableStateOf<Post?>(null) }         // post currently open in the detail sheet
     var showImagePickerDialog by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    val postDetailSheetState = rememberModalBottomSheetState()
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
+    // Pick an existing photo from the gallery, upload it, then save the resulting URL.
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { pickedImageUri ->
+        pickedImageUri?.let { imageUri ->
             coroutineScope.launch {
-                val imageUrl = uploadToCloudinary(context, it)
-                if (imageUrl.isNotBlank()) {
-                    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+                val uploadedImageUrl = uploadToCloudinary(context, imageUri)
+                if (uploadedImageUrl.isNotBlank()) {
+                    val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
                     FirebaseFirestore.getInstance()
                         .collection("users")
-                        .document(uid)
-                        .set(mapOf("avatarUrl" to imageUrl), SetOptions.merge())
+                        .document(currentUid)
+                        .set(mapOf("avatarUrl" to uploadedImageUrl), SetOptions.merge())
                         .addOnSuccessListener {
-                            viewModel.fetchUserProfile(uid)
+                            viewModel.fetchUserProfile(currentUid)
                         }
                 }
             }
         }
     }
 
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    // Holds the temp file URI while the camera app is capturing a new photo.
+    var pendingCameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) {
-            cameraImageUri?.let {
+    // Take a new photo with the camera, upload it, then save the resulting URL.
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { photoWasSaved ->
+        if (photoWasSaved) {
+            pendingCameraImageUri?.let { imageUri ->
                 coroutineScope.launch {
-                    val imageUrl = uploadToCloudinary(context, it)
-                    if (imageUrl.isNotBlank()) {
-                        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+                    val uploadedImageUrl = uploadToCloudinary(context, imageUri)
+                    if (uploadedImageUrl.isNotBlank()) {
+                        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
                         FirebaseFirestore.getInstance()
                             .collection("users")
-                            .document(uid)
-                            .set(mapOf("avatarUrl" to imageUrl), SetOptions.merge())
+                            .document(currentUid)
+                            .set(mapOf("avatarUrl" to uploadedImageUrl), SetOptions.merge())
                             .addOnSuccessListener {
-                                viewModel.fetchUserProfile(uid)
+                                viewModel.fetchUserProfile(currentUid)
                             }
                     }
                 }
@@ -269,15 +279,15 @@ fun ProfileScreen(
         }
     }
 
-    // Dummy posts - replace with Firestore data later
-    val dummyPosts = listOf(
+    // Placeholder posts — swap for real Firestore data later.
+    val placeholderPosts = listOf(
         Post(id = "1", heading = "Modern Web Development Trends 2024", description = "In this post I walk you through modern web development.", likeCount = 124, commentCount = 18, imageUrl = "purple"),
         Post(id = "2", heading = "UI/UX Design Principles for Mobile", description = "Learn core principles of mobile UI/UX design.", likeCount = 85, commentCount = 12, imageUrl = "red"),
         Post(id = "3", heading = "Flutter vs Kotlin", description = "A detailed comparison between Flutter and Kotlin.", likeCount = 60, commentCount = 9, imageUrl = "green"),
         Post(id = "4", heading = "Clean Architecture in Android", description = "How to structure your Android app using Clean Architecture.", likeCount = 45, commentCount = 7, imageUrl = "orange"),
     )
 
-    // ---- Skills Dialog ----
+    // ---------------- Skills dialog (shown when a "Known"/"Learning" chip area is tapped) ----------------
     if (selectedSkillType != null) {
         AlertDialog(
             onDismissRequest = { selectedSkillType = null },
@@ -290,13 +300,13 @@ fun ProfileScreen(
             },
             text = {
                 Column {
-                    val skills = if (selectedSkillType == "learning")
+                    val skillsToShow = if (selectedSkillType == "learning")
                         userProfile?.learningSkills else userProfile?.knownSkills
-                    if (skills.isNullOrEmpty()) {
+                    if (skillsToShow.isNullOrEmpty()) {
                         Text("No skills added yet", color = AppColors.TextSecondary)
                     } else {
-                        skills.forEach {
-                            Text("• $it", fontSize = 14.sp, modifier = Modifier.padding(vertical = 4.dp), color = AppColors.TextPrimary)
+                        skillsToShow.forEach { skill ->
+                            Text("• $skill", fontSize = 14.sp, modifier = Modifier.padding(vertical = 4.dp), color = AppColors.TextPrimary)
                         }
                     }
                 }
@@ -309,19 +319,19 @@ fun ProfileScreen(
         )
     }
 
-    // ---- Image Picker Dialog ----
+    // ---------------- Camera vs Gallery picker dialog ----------------
     ImagePickerDialog(
         showDialog = showImagePickerDialog,
         onDismissRequest = { showImagePickerDialog = false },
         onCameraClick = {
             showImagePickerDialog = false
-            val uri = androidx.core.content.FileProvider.getUriForFile(
+            val tempPhotoUri = androidx.core.content.FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.provider",
                 java.io.File.createTempFile("avatar_", ".jpg", context.cacheDir)
             )
-            cameraImageUri = uri
-            cameraLauncher.launch(uri)
+            pendingCameraImageUri = tempPhotoUri
+            cameraLauncher.launch(tempPhotoUri)
         },
         onGalleryClick = {
             showImagePickerDialog = false
@@ -329,11 +339,11 @@ fun ProfileScreen(
         }
     )
 
-    // ---- Post Detail Bottom Sheet ----
+    // ---------------- Post detail bottom sheet ----------------
     if (selectedPost != null) {
         ModalBottomSheet(
             onDismissRequest = { selectedPost = null },
-            sheetState = sheetState,
+            sheetState = postDetailSheetState,
             containerColor = AppColors.Surface
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
@@ -355,9 +365,9 @@ fun ProfileScreen(
                 HorizontalDivider(color = AppColors.Divider)
                 Spacer(Modifier.height(8.dp))
 
-                listOf("Save post", "Hide post", "Report post").forEach { action ->
+                listOf("Save post", "Hide post", "Report post").forEach { actionLabel ->
                     TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-                        Text(action, color = AppColors.TextPrimary, fontSize = 16.sp)
+                        Text(actionLabel, color = AppColors.TextPrimary, fontSize = 16.sp)
                     }
                 }
                 TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
@@ -369,7 +379,7 @@ fun ProfileScreen(
         }
     }
 
-    // ---- Main Screen ----
+    // ---------------- Main screen content ----------------
     // Root Box centers the content column on wide screens; on phones it just fills the width.
     Box(
         modifier = Modifier
@@ -389,8 +399,8 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Loading state
-            if (uiState is ProfileState.Loading) {
+            // Loading state — bail out before drawing the rest of the profile.
+            if (profileLoadState is ProfileState.Loading) {
                 item {
                     Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = AppColors.Primary)
@@ -399,7 +409,7 @@ fun ProfileScreen(
                 return@LazyColumn
             }
 
-            // ---- Top Bar ----
+            // ---- Top bar: back button, title, settings ----
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -429,12 +439,13 @@ fun ProfileScreen(
                 }
             }
 
-            // ---- Avatar with Edit Icon ----
+            // ---- Avatar with edit badge ----
             item {
                 Spacer(Modifier.height(10.dp))
                 Box(contentAlignment = Alignment.BottomEnd) {
 
                     if (userProfile?.avatarUrl.isNullOrEmpty()) {
+                        // No avatar uploaded yet — fall back to initials on a colored circle.
                         Box(
                             modifier = Modifier
                                 .size(avatarSize)
@@ -443,12 +454,12 @@ fun ProfileScreen(
                                 .border(2.dp, AppColors.Primary.copy(alpha = 0.3f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            val initials = userProfile?.name
+                            val nameInitials = userProfile?.name
                                 ?.split(" ")
                                 ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
                                 ?.take(2)
                                 ?.joinToString("") ?: "?"
-                            Text(initials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                            Text(nameInitials, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
                         }
                     } else {
                         AsyncImage(
@@ -462,7 +473,7 @@ fun ProfileScreen(
                         )
                     }
 
-                    // Edit badge — white ring + single dark green background, no double bg
+                    // Edit badge — white ring + single dark green background, no double bg.
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -486,7 +497,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // ---- Name + College + Location + Bio ----
+            // ---- Name, college, location, bio ----
             item {
                 Text(
                     text = userProfile?.name ?: "Your Name",
@@ -546,7 +557,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // ---- Stats Card (Posts, Helps, Connections) ----
+            // ---- Stats card: Posts, Helps, Connections ----
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -581,9 +592,9 @@ fun ProfileScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // ---- Edit Profile (own profile) OR Connect/Pending/Message (other user's profile) ----
+            // ---- Primary action: Edit Profile (own profile) OR Connect/Pending/Message (other user) ----
             item {
-                if (isOwnProfile) {
+                if (isViewingOwnProfile) {
                     OutlinedButton(
                         onClick = {},
                         modifier = Modifier
@@ -603,9 +614,10 @@ fun ProfileScreen(
                         connectionStatus == "accepted" -> {
                             Button(
                                 onClick = {
-                                    val myUid = currentUserUid.value ?: return@Button
-                                    val targetUid = uid ?: return@Button
-                                    val chatId = listOf(myUid, targetUid).sorted().joinToString("_")
+                                    val myUid = loggedInUid.value ?: return@Button
+                                    val otherUid = uid ?: return@Button
+                                    // Sorting both UIDs keeps the chat id identical no matter who opens the chat first.
+                                    val chatId = listOf(myUid, otherUid).sorted().joinToString("_")
                                     onNavigateToChat(chatId)
                                 },
                                 modifier = Modifier
@@ -631,9 +643,9 @@ fun ProfileScreen(
                                 Text("Request Pending", fontWeight = FontWeight.Medium)
                             }
                         }
-                        // NEW: instant confirmation right after swipe, while listener hasn't
-                        // caught up to "pending" yet
-                        justSentRequest -> {
+                        // Instant confirmation shown right after swipe, while the listener
+                        // hasn't caught up to "pending" yet.
+                        requestJustSent -> {
                             Button(
                                 onClick = {},
                                 enabled = false,
@@ -658,25 +670,25 @@ fun ProfileScreen(
                             }
                         }
                         else -> {
-                            // null or "rejected" -> allow sending a fresh connection request
+                            // null or "rejected" -> allow sending a fresh connection request.
                             SlideToSwapButton(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = horizontalPadding),
                                 onConfirmed = {
-                                    val myUid = currentUserUid.value ?: return@SlideToSwapButton
-                                    val targetUid = uid ?: return@SlideToSwapButton
+                                    val myUid = loggedInUid.value ?: return@SlideToSwapButton
+                                    val otherUid = uid ?: return@SlideToSwapButton
                                     connectionViewModel.sendConnectionRequest(
                                         currentUserId = myUid,
-                                        targetUserId = targetUid,
+                                        targetUserId = otherUid,
                                         onSuccess = {
-                                            // Only show "Request Sent" once Firestore actually confirms the write
-                                            justSentRequest = true
+                                            // Only show "Request Sent" once Firestore actually confirms the write.
+                                            requestJustSent = true
                                         },
-                                        onFailure = { e ->
+                                        onFailure = { error ->
                                             android.widget.Toast.makeText(
                                                 context,
-                                                "Couldn't send request: ${e.localizedMessage ?: "check your connection"}",
+                                                "Couldn't send request: ${error.localizedMessage ?: "check your connection"}",
                                                 android.widget.Toast.LENGTH_LONG
                                             ).show()
                                         }
@@ -689,7 +701,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // ---- Can Teach Section ----
+            // ---- "Can Teach" section ----
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -708,19 +720,24 @@ fun ProfileScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(6.dp))
-                            Text("Can Teach", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+                            Text(
+                                "Can Teach",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
                         }
                         Spacer(Modifier.height(10.dp))
 
-                        val teachSkills = userProfile?.knownSkills
-                        if (teachSkills.isNullOrEmpty()) {
+                        val knownSkills = userProfile?.knownSkills
+                        if (knownSkills.isNullOrEmpty()) {
                             Text("No skills added yet", fontSize = 13.sp, color = AppColors.TextSecondary)
                         } else {
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                teachSkills.forEach { skill ->
+                                knownSkills.forEach { skill ->
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(50))
@@ -737,7 +754,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // ---- Wants to Learn Section ----
+            // ---- "Wants to Learn" section ----
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -760,15 +777,15 @@ fun ProfileScreen(
                         }
                         Spacer(Modifier.height(10.dp))
 
-                        val learnSkills = userProfile?.learningSkills
-                        if (learnSkills.isNullOrEmpty()) {
+                        val learningSkills = userProfile?.learningSkills
+                        if (learningSkills.isNullOrEmpty()) {
                             Text("No skills added yet", fontSize = 13.sp, color = AppColors.TextSecondary)
                         } else {
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                learnSkills.forEach { skill ->
+                                learningSkills.forEach { skill ->
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(50))
@@ -782,23 +799,17 @@ fun ProfileScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(10.dp))
             }
+
 
             // ---- Recent Recognition ----
             item {
-                Text(
-                    "Recent Recognition",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.TextPrimary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = horizontalPadding)
-                )
-                Spacer(Modifier.height(10.dp))
 
-                // Top Mentor badge card
+
+
+
+                // Top Mentor badge card.
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
@@ -807,60 +818,279 @@ fun ProfileScreen(
                         .fillMaxWidth()
                         .padding(horizontal = horizontalPadding)
                 ) {
+
+
                     Row(
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(AppColors.PrimaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.EmojiEvents,
+
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                                Icons.Default.Link,
                                 contentDescription = null,
                                 tint = Color(0xFF085041),
                                 modifier = Modifier.size(20.dp)
                             )
-                        }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Top Mentor (March)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
-                            Text("Helped 12 peers with Design Systems.", fontSize = 12.sp, color = AppColors.TextSecondary)
+                            Text("Linked Accounts",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
+
                         }
                     }
-                }
-                Spacer(Modifier.height(10.dp))
+                    val instagramLink = userProfile?.linkedAccounts?.get("instagram")
 
-                // Two stat cards side by side
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = horizontalPadding),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                        elevation = CardDefaults.cardElevation(0.dp),
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(instagramLink)))
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.VerifiedUser,
-                                contentDescription = null,
-                                tint = Color(0xFF085041),
-                                modifier = Modifier.size(22.dp)
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Instagram",
+//                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
+
+                        Text(
+                            text = "Instagram",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextPrimary,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .weight(1f)
+                        )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
+
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 52.dp),
+                        color = AppColors.Divider,
+                        thickness = 0.5.dp
+                    )
+
+
+                    val linkedLink = userProfile?.linkedAccounts?.get("linkedin")
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(linkedLink)))
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Work,
+                                contentDescription = "LinkedIn",
+//                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "LinkedIn",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextPrimary,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .weight(1f)
+                        )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 52.dp),
+                        color = AppColors.Divider,
+                        thickness = 0.5.dp
+                    )
+
+
+                    val githubLink = userProfile?.linkedAccounts?.get("github")
+
+
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubLink)))
+                           }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Code,
+                                contentDescription = "Github",
+//                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "GitHub",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextPrimary,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .weight(1f)
+                        )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+
+
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 52.dp),
+                        color = AppColors.Divider,
+                        thickness = 0.5.dp
+                    )
+
+                    val twitterLink = userProfile?.linkedAccounts?.get("twitter")
+
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(twitterLink)))
+
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.AlternateEmail,
+                                contentDescription = "X",
+//                                tint = IconTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "Twitter/X",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextPrimary,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .weight(1f)
+                        )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AppColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+
+
+
+
+
+                    //  HARE IS THE END OF LINK ACCOUNTS
+
+
+
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
@@ -883,9 +1113,11 @@ fun ProfileScreen(
                     }
                 }
                 Spacer(Modifier.height(20.dp))
+
             }
 
-            // ---- Posts Header ----
+
+            // ---- Posts header ----
             item {
                 Row(
                     modifier = Modifier
@@ -900,15 +1132,15 @@ fun ProfileScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // ---- Posts Grid (2 cols COMPACT, 3 cols MEDIUM, 4 cols EXPANDED) ----
-            items(dummyPosts.chunked(postColumns)) { rowPosts ->
+            // ---- Posts grid (2 cols COMPACT, 3 cols MEDIUM, 4 cols EXPANDED) ----
+            items(placeholderPosts.chunked(postGridColumns)) { rowOfPosts ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = horizontalPadding, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    rowPosts.forEach { post ->
+                    rowOfPosts.forEach { post ->
                         Card(
                             modifier = Modifier
                                 .weight(1f)
@@ -945,19 +1177,20 @@ fun ProfileScreen(
                             }
                         }
                     }
-                    // Fill remaining slots in the last row so cards don't stretch to fill the gap
-                    if (rowPosts.size < postColumns) {
-                        repeat(postColumns - rowPosts.size) {
+                    // Fill remaining slots in the last row so cards don't stretch to fill the gap.
+                    if (rowOfPosts.size < postGridColumns) {
+                        repeat(postGridColumns - rowOfPosts.size) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
             }
         }
+
     }
 }
 
-// ---- Image Picker Dialog ----
+// Dialog that lets the user choose between taking a new photo or picking one from the gallery.
 @Composable
 fun ImagePickerDialog(
     showDialog: Boolean,
@@ -995,44 +1228,47 @@ fun ImagePickerDialog(
     }
 }
 
-// Separate function for uploading to Cloudinary
+// Crops the picked image to a square, resizes it, and uploads it to Cloudinary.
+// Returns the resulting (face-cropped) URL, or an empty string if anything failed.
 @OptIn(ExperimentalCoroutinesApi::class)
-suspend fun uploadToCloudinary(context: android.content.Context, uri: Uri): String {
-    val cloudName = "db7wneko6"
-    val uploadPreset = "peerlearn_avatar"
+suspend fun uploadToCloudinary(context: android.content.Context, imageUri: Uri): String {
+    val cloudinaryCloudName = "db7wneko6"
+    val cloudinaryUploadPreset = "peerlearn_avatar"
 
-    val stream = context.contentResolver.openInputStream(uri) ?: return ""
-    val originalBitmap = android.graphics.BitmapFactory.decodeStream(stream)
-    stream.close()
+    val inputStream = context.contentResolver.openInputStream(imageUri) ?: return ""
+    val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+    inputStream.close()
 
-    val size = minOf(originalBitmap.width, originalBitmap.height)
-    val x = (originalBitmap.width - size) / 2
-    val y = (originalBitmap.height - size) / 2
-    val cropped = android.graphics.Bitmap.createBitmap(originalBitmap, x, y, size, size)
+    // Crop to a centered square before resizing, so the avatar isn't stretched.
+    val squareSide = minOf(originalBitmap.width, originalBitmap.height)
+    val cropStartX = (originalBitmap.width - squareSide) / 2
+    val cropStartY = (originalBitmap.height - squareSide) / 2
+    val squareBitmap = android.graphics.Bitmap.createBitmap(originalBitmap, cropStartX, cropStartY, squareSide, squareSide)
 
-    val resized = android.graphics.Bitmap.createScaledBitmap(cropped, 400, 400, true)
-    val baos = java.io.ByteArrayOutputStream()
-    resized.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, baos)
-    val bytes = baos.toByteArray()
+    val resizedBitmap = android.graphics.Bitmap.createScaledBitmap(squareBitmap, 400, 400, true)
+    val jpegOutputStream = java.io.ByteArrayOutputStream()
+    resizedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, jpegOutputStream)
+    val jpegBytes = jpegOutputStream.toByteArray()
 
     return withContext(Dispatchers.IO) {
         try {
-            val url = java.net.URL("https://api.cloudinary.com/v1_1/$cloudName/image/upload")
-            val boundary = "Boundary-${System.currentTimeMillis()}"
-            val connection = url.openConnection() as java.net.HttpURLConnection
+            val uploadUrl = java.net.URL("https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload")
+            val multipartBoundary = "Boundary-${System.currentTimeMillis()}"
+            val connection = uploadUrl.openConnection() as java.net.HttpURLConnection
             connection.requestMethod = "POST"
             connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$multipartBoundary")
 
-            val output = connection.outputStream
-            output.write("--$boundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$uploadPreset\r\n".toByteArray())
-            output.write("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
-            output.write(bytes)
-            output.write("\r\n--$boundary--\r\n".toByteArray())
-            output.flush()
+            val requestBody = connection.outputStream
+            requestBody.write("--$multipartBoundary\r\nContent-Disposition: form-data; name=\"upload_preset\"\r\n\r\n$cloudinaryUploadPreset\r\n".toByteArray())
+            requestBody.write("--$multipartBoundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray())
+            requestBody.write(jpegBytes)
+            requestBody.write("\r\n--$multipartBoundary--\r\n".toByteArray())
+            requestBody.flush()
 
-            val response = connection.inputStream.bufferedReader().readText()
-            org.json.JSONObject(response).getString("secure_url")
+            val responseBody = connection.inputStream.bufferedReader().readText()
+            // Insert Cloudinary's face-aware square-crop transform into the returned URL.
+            org.json.JSONObject(responseBody).getString("secure_url")
                 .replace("/upload/", "/upload/w_400,h_400,c_thumb,g_face/")
         } catch (e: Exception) {
             e.printStackTrace()

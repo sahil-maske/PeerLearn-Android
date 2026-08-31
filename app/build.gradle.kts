@@ -40,6 +40,8 @@ dependencies {
     // Firebase BOM - sirf EK baar, sabse pehle
     implementation(platform(libs.firebase.bom))
 
+    implementation("androidx.lifecycle:lifecycle-process:2.8.x")
+
     // Firebase libraries - version number nahi likhna, BOM handle karega
     implementation("com.google.firebase:firebase-messaging")
     implementation(libs.firebase.auth)

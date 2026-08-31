@@ -22,7 +22,13 @@ data class User(
     val linkedAccounts: Map<String, String> = emptyMap(),
     val isOnline: Boolean = false,
     val lastSeen: Long = 0L,        // ya Timestamp, jo bhi convention already use ho raha hai tumhare model mein
-    val hideOnlineStatus: Boolean = false
+    val hideOnlineStatus: Boolean = false,
+    val showPhoneNumber: Boolean = false,
+    val profileVisibility: String = "Everyone"
+//    val instagramURL : String ="",
+//    val linkedInURL : String ="",
+//    val gitHubURL : String ="",
+//    val gitHubURL : String ="",
 ) {
     companion object {
         const val STATUS_VERIFIED = "VERIFIED"

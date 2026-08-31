@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
@@ -21,7 +22,9 @@ data class PeerInfo(
     val skillContext: String = ""
 )
 
-class ChatConversationViewModel(private val chatId: String) : ViewModel() {
+class ChatConversationViewModel(private val chatId: String) : ViewModel(
+
+) {
 
     private val db = Firebase.firestore
     val currentUid: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -35,12 +38,12 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
     private val _otherUserPresence = MutableStateFlow<User?>(null)
     val otherUserPresence: StateFlow<User?> = _otherUserPresence
 
-    // NEW: presence listener ko reference store karna hai taaki onCleared() mein remove kar sake
     private var presenceListener: ListenerRegistration? = null
 
     init {
         loadConversationAndPeer()
         listenToMessages()
+        markAsRead() // NEW: screen khulte hi apna unread count 0 kar do
     }
 
     private fun loadConversationAndPeer() {
@@ -67,7 +70,6 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
                     skillContext = skillContext
                 )
 
-                // NEW: peer ka uid mil gaya, ab uska presence sunna start karo
                 listenToPeerPresence(otherUid)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -75,7 +77,6 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
         }
     }
 
-    // NEW FUNCTION: other user ke presence document ko real-time sunta hai
     private fun listenToPeerPresence(otherUid: String) {
         presenceListener = db.collection("users").document(otherUid)
             .addSnapshotListener { snapshot, error ->
@@ -108,17 +109,31 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel() {
         val convoRef = db.collection("conversations").document(chatId)
         convoRef.collection("messages").add(message)
 
+        // NEW: peer ka unread count +1 badhao, apna 0 pe rakho (kyunki hum khud dekh rahe hain)
         convoRef.set(
             mapOf(
                 "participants" to listOf(currentUid, peerUid),
                 "lastMessage" to text,
-                "timestamp" to System.currentTimeMillis()
+                "timestamp" to System.currentTimeMillis(),
+                "unreadCounts" to mapOf(
+                    peerUid to FieldValue.increment(1),
+                    currentUid to 0L
+                )
             ),
             SetOptions.merge()
         )
     }
 
-    // NEW: listener ko clean karo jab ViewModel destroy ho, warna memory leak hoga
+    // NEW: is chat ko khola matlab maine padh liya — apna unread count 0 kar do
+    private fun markAsRead() {
+        if (currentUid.isBlank()) return
+        db.collection("conversations").document(chatId)
+            .update("unreadCounts.$currentUid", 0L)
+            .addOnFailureListener {
+                // document abhi tak bana hi nahi (pehla message kabhi bheja hi nahi) — ignore kar sakte hain
+            }
+    }
+
     override fun onCleared() {
         super.onCleared()
         presenceListener?.remove()

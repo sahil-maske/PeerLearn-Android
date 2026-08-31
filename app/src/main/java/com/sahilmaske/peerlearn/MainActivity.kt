@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,7 +16,9 @@ import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
 import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
+import com.sahilmaske.peerlearn.ui.Settings.PresenceManager
 import com.sahilmaske.peerlearn.ui.Settings.PrivacyScreen
+import com.sahilmaske.peerlearn.ui.Settings.ProfileVisibilityScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
@@ -32,6 +35,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // NEW: poori app ke process lifecycle ke saath PresenceManager register kiya
+        // Isse pehle ye kabhi call hi nahi ho raha tha, isiliye online/offline update nahi ho raha tha
+        ProcessLifecycleOwner.get().lifecycle.addObserver(PresenceManager())
+
         setContent {
             PeerLearnTheme {
                 PeerLearnApp()
@@ -175,6 +183,12 @@ fun PeerLearnApp() {
         }
         composable("privacy") {
             PrivacyScreen(
+                onBack = { navController.popBackStack() },
+                onProfileVisibilityClick = { navController.navigate("profile_visibility") }
+            )
+        }
+        composable("profile_visibility") {
+            ProfileVisibilityScreen(
                 onBack = { navController.popBackStack() }
             )
         }

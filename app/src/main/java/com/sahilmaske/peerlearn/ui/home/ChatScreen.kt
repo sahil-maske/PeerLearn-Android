@@ -66,67 +66,75 @@ fun ChatScreenContent(
             .fillMaxSize()
             .background(AppColors.Background)
             .statusBarsPadding()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.Start
     ) {
-        // ---- Top Bar ----
+        // ---- Top Bar (real app jaisa — surface color, subtle shadow) ----
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.Surface)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.School,
                 contentDescription = null,
                 tint = Color(0xFF0F6E6E),
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                "PeerLearn",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF0F6E6E)
-            )
-
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFFE9E7E0))
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-
-        ) {
-            Icon(
-                Icons.Outlined.Search,
-                contentDescription = null,
-                tint = Color(0xFF6B6B6B)
+                modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Search conversations...",
-                color = Color(0xFF6B6B6B),
-                fontSize = 15.sp
+                "PeerLearn",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF0F6E6E)
             )
         }
-        Text(
-            "Messages",
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF000000)
-        )
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            items(conversations){ convo ->
-                ConversationItem(convo, navController)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFFE9E7E0))
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Outlined.Search,
+                    contentDescription = null,
+                    tint = Color(0xFF6B6B6B)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Search conversations...",
+                    color = Color(0xFF6B6B6B),
+                    fontSize = 15.sp
+                )
+            }
+            Text(
+                "Messages",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF000000)
+            )
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(conversations) { convo ->
+                    ConversationItem(convo, navController)
+                }
             }
         }
     }
 }
+
 @Composable
 fun ConversationItem(convo: Conversation, navController: NavController) {
     Card(
@@ -145,30 +153,52 @@ fun ConversationItem(convo: Conversation, navController: NavController) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (convo.avatarUrl.isBlank()) {
-                // Photo nahi hai -> fallback placeholder (peach bg + swap-arrow icon)
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFCE4CC)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.SwapHoriz,
-                        contentDescription = "No profile photo",
-                        tint = Color(0xFFB5651D),
-                        modifier = Modifier.size(24.dp)
+            // avatar ko Box mein wrap kiya taaki corner pe green dot overlay kar sakein
+            Box(modifier = Modifier.size(52.dp)) {
+                if (convo.avatarUrl.isBlank()) {
+                    // Photo nahi hai -> fallback placeholder (peach bg + swap-arrow icon)
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFCE4CC)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.SwapHoriz,
+                            contentDescription = "No profile photo",
+                            tint = Color(0xFFB5651D),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    AsyncImage(
+                        model = convo.avatarUrl,
+                        contentDescription = convo.name,
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
                     )
                 }
-            } else {
-                AsyncImage(
-                    model = convo.avatarUrl,
-                    contentDescription = convo.name,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                )
+
+                // online hai to avatar ke bottom-end corner pe green dot (WhatsApp jaisa)
+                if (convo.isOnline) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .align(Alignment.BottomEnd)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2ECC71))
+                        )
+                    }
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -230,7 +260,7 @@ fun ChatScreenPreview() {
                 avatarUrl = "",
                 lastMessage = "Hey, how's the project going?",
                 time = "10:30 AM",
-                unreadCount = 1,
+                unreadCount = 99,
                 hasUnread = true
             ),
             Conversation(

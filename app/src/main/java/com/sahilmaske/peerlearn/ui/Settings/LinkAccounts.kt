@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,10 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 
 // Purple icon badge colors — same as AccountScreen
@@ -39,34 +44,57 @@ private val IconTint = Color(0xFF534AB7)
 fun LinkAccounts(onBack: () -> Unit) {
 
     val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
+    val db = remember { if (isPreview) null else FirebaseFirestore.getInstance() }
+    val uid = remember { if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid }
 
     // ---------- Instagram state ----------
-    var instagramLink by remember { mutableStateOf<String?>(null) } // TODO: Firestore se load
+    var instagramLink by remember { mutableStateOf<String?>(null) }
     var showInstagramSheet by remember { mutableStateOf(false) }
     var instagramInput by remember { mutableStateOf("") }
     var instagramError by remember { mutableStateOf(false) }
     val instagramSheetState = rememberModalBottomSheetState()
 
     // ---------- LinkedIn state ----------
-    var linkedInLink by remember { mutableStateOf<String?>(null) } // TODO: Firestore se load
+    var linkedInLink by remember { mutableStateOf<String?>(null) }
     var showLinkedInSheet by remember { mutableStateOf(false) }
     var linkedInInput by remember { mutableStateOf("") }
     var linkedInError by remember { mutableStateOf(false) }
     val linkedInSheetState = rememberModalBottomSheetState()
 
     // ---------- GitHub state ----------
-    var githubLink by remember { mutableStateOf<String?>(null) } // TODO: Firestore se load
+    var githubLink by remember { mutableStateOf<String?>(null) }
     var showGithubSheet by remember { mutableStateOf(false) }
     var githubInput by remember { mutableStateOf("") }
     var githubError by remember { mutableStateOf(false) }
     val githubSheetState = rememberModalBottomSheetState()
 
     // ---------- Twitter/X state ----------
-    var twitterLink by remember { mutableStateOf<String?>(null) } // TODO: Firestore se load
+    var twitterLink by remember { mutableStateOf<String?>(null) }
     var showTwitterSheet by remember { mutableStateOf(false) }
     var twitterInput by remember { mutableStateOf("") }
     var twitterError by remember { mutableStateOf(false) }
     val twitterSheetState = rememberModalBottomSheetState()
+
+    // NEW: screen khulte hi Firestore se linkedAccounts map load karo
+    LaunchedEffect(uid) {
+        if (uid == null || db == null) return@LaunchedEffect
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val map = doc.get("linkedAccounts") as? Map<*, *> ?: return@addOnSuccessListener
+                instagramLink = map["instagram"] as? String
+                linkedInLink = map["linkedin"] as? String
+                githubLink = map["github"] as? String
+                twitterLink = map["twitter"] as? String
+            }
+    }
+
+    // NEW: ek link save karne ka common function — Firestore map field mein merge karta hai
+    fun saveLink(platform: String, link: String) {
+        if (uid == null || db == null) return
+        db.collection("users").document(uid)
+            .set(mapOf("linkedAccounts" to mapOf(platform to link)), SetOptions.merge())
+    }
 
     Column(
         modifier = Modifier
@@ -402,7 +430,7 @@ fun LinkAccounts(onBack: () -> Unit) {
                                 trimmed.startsWith("https://www.instagram.com/")
                         if (isValid) {
                             instagramLink = trimmed
-                            // TODO: Firestore save yaha karna — viewModel.updateLinkedAccount("instagram", trimmed)
+                            saveLink("instagram", trimmed) // NEW: Firestore mein save
                             showInstagramSheet = false
                         } else {
                             instagramError = true
@@ -458,7 +486,7 @@ fun LinkAccounts(onBack: () -> Unit) {
                                 trimmed.startsWith("https://www.linkedin.com/")
                         if (isValid) {
                             linkedInLink = trimmed
-                            // TODO: Firestore save yaha karna
+                            saveLink("linkedin", trimmed) // NEW: Firestore mein save
                             showLinkedInSheet = false
                         } else {
                             linkedInError = true
@@ -514,7 +542,7 @@ fun LinkAccounts(onBack: () -> Unit) {
                                 trimmed.startsWith("https://www.github.com/")
                         if (isValid) {
                             githubLink = trimmed
-                            // TODO: Firestore save yaha karna
+                            saveLink("github", trimmed) // NEW: Firestore mein save
                             showGithubSheet = false
                         } else {
                             githubError = true
@@ -571,7 +599,7 @@ fun LinkAccounts(onBack: () -> Unit) {
                                 trimmed.startsWith("https://www.x.com/")
                         if (isValid) {
                             twitterLink = trimmed
-                            // TODO: Firestore save yaha karna
+                            saveLink("twitter", trimmed) // NEW: Firestore mein save
                             showTwitterSheet = false
                         } else {
                             twitterError = true

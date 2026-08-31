@@ -52,10 +52,17 @@ class ChatViewModel : ViewModel() {
                             val userDoc = db.collection("users").document(otherUid).get().await()
                             val name = userDoc.getString("name") ?: "Unknown"
                             val avatarUrl = userDoc.getString("avatarUrl") ?: ""
-                            val isOnline = userDoc.getBoolean("isOnline") ?: false
+
+                            val hideOnlineStatus = userDoc.getBoolean("hideOnlineStatus") ?: false
+                            val rawIsOnline = userDoc.getBoolean("isOnline") ?: false
+                            val isOnline = rawIsOnline && !hideOnlineStatus
 
                             val lastMessage = doc.getString("lastMessage") ?: ""
                             val timestamp = doc.getLong("timestamp") ?: 0L
+
+                            // NEW: unreadCounts map se sirf apna (currentUid) wala number nikalo
+                            val unreadMap = doc.get("unreadCounts") as? Map<*, *>
+                            val unreadCount = (unreadMap?.get(currentUid) as? Long)?.toInt() ?: 0
 
                             Conversation(
                                 id = doc.id,
@@ -64,7 +71,9 @@ class ChatViewModel : ViewModel() {
                                 avatarUrl = avatarUrl,
                                 lastMessage = lastMessage,
                                 time = formatTime(timestamp),
-                                isOnline = isOnline
+                                isOnline = isOnline,
+                                unreadCount = unreadCount, // NEW
+                                hasUnread = unreadCount > 0 // NEW
                             )
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -73,7 +82,6 @@ class ChatViewModel : ViewModel() {
                     }
                     _conversations.value = resolvedList
 
-                    // 👇 ab har otherUid pe real-time presence listener attach karo
                     resolvedList.forEach { convo ->
                         attachPresenceListener(convo.otherUid)
                     }
@@ -82,14 +90,16 @@ class ChatViewModel : ViewModel() {
     }
 
     private fun attachPresenceListener(otherUid: String) {
-        if (presenceListeners.containsKey(otherUid)) return // already listening
+        if (presenceListeners.containsKey(otherUid)) return
 
         val listener = db.collection("users").document(otherUid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
-                val isOnline = snapshot.getBoolean("isOnline") ?: false
 
-                // current list mein us user ka isOnline update karo
+                val hideOnlineStatus = snapshot.getBoolean("hideOnlineStatus") ?: false
+                val rawIsOnline = snapshot.getBoolean("isOnline") ?: false
+                val isOnline = rawIsOnline && !hideOnlineStatus
+
                 _conversations.value = _conversations.value.map { convo ->
                     if (convo.otherUid == otherUid) convo.copy(isOnline = isOnline) else convo
                 }
