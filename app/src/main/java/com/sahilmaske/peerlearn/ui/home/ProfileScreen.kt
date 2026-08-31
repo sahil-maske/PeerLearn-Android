@@ -151,6 +151,13 @@ fun ProfileScreen(
     // ---------------- Connection state (only matters when viewing someone else's profile) ----------------
     val connectionStatus by connectionViewModel.connectionStatus.collectAsState()
 
+    val canViewFullProfile = isViewingOwnProfile ||
+            userProfile?.profileVisibility != "Connections Only" ||
+            connectionStatus == "accepted"
+
+    // Live connection status from the real connections collection.
+
+
     // Live post count from the real posts collection (see ProfileViewModel.listenPostCount).
     val postCount by viewModel.postCount.collectAsState()
 
@@ -805,266 +812,81 @@ fun ProfileScreen(
 
             // ---- Recent Recognition ----
             item {
-
-
-
-
-                // Top Mentor badge card.
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = horizontalPadding)
-                ) {
-
-
-                    Row(
-                        modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                if(canViewFullProfile) {
+                    // Top Mentor badge card.
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+                        elevation = CardDefaults.cardElevation(0.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = horizontalPadding)
                     ) {
 
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
+
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Icon(
                                 Icons.Default.Link,
                                 contentDescription = null,
                                 tint = Color(0xFF085041),
                                 modifier = Modifier.size(20.dp)
                             )
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Linked Accounts",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.TextPrimary
-                            )
-
-                        }
-                    }
-                    val instagramLink = userProfile?.linkedAccounts?.get("instagram")
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(instagramLink)))
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.CameraAlt,
-                                contentDescription = "Instagram",
-//                                tint = IconTint,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Text(
-                            text = "Instagram",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextPrimary,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .weight(1f)
-                        )
-
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 52.dp),
-                        color = AppColors.Divider,
-                        thickness = 0.5.dp
-                    )
-
-
-                    val linkedLink = userProfile?.linkedAccounts?.get("linkedin")
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(linkedLink)))
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Work,
-                                contentDescription = "LinkedIn",
-//                                tint = IconTint,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Text(
-                            text = "LinkedIn",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextPrimary,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .weight(1f)
-                        )
-
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 52.dp),
-                        color = AppColors.Divider,
-                        thickness = 0.5.dp
-                    )
-
-
-                    val githubLink = userProfile?.linkedAccounts?.get("github")
-
-
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubLink)))
-                           }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Code,
-                                contentDescription = "Github",
-//                                tint = IconTint,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Text(
-                            text = "GitHub",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextPrimary,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .weight(1f)
-                        )
-
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-
-
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 52.dp),
-                        color = AppColors.Divider,
-                        thickness = 0.5.dp
-                    )
-
-                    val twitterLink = userProfile?.linkedAccounts?.get("twitter")
-
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(twitterLink)))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    "Linked Accounts",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextPrimary
+                                )
 
                             }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.AlternateEmail,
-                                contentDescription = "X",
-//                                tint = IconTint,
-                                modifier = Modifier.size(20.dp)
-                            )
                         }
+                        val instagramLink = userProfile?.linkedAccounts?.get("instagram")
 
-                        Text(
-                            text = "Twitter/X",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextPrimary,
+                        Row(
                             modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .weight(1f)
-                        )
+                                .fillMaxWidth()
+                                .clickable {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(instagramLink)
+                                        )
+                                    )
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = "Instagram",
+//                                tint = IconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "Instagram",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextPrimary,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .weight(1f)
+                            )
 
 //                        Text(
 //                            text = if (instagramLink != null) "Connected" else "Connect",
@@ -1073,46 +895,223 @@ fun ProfileScreen(
 //                            color = IconTint
 //                        )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
 
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            tint = AppColors.Primary,
-                            modifier = Modifier.size(14.dp)
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = AppColors.Primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 52.dp),
+                            color = AppColors.Divider,
+                            thickness = 0.5.dp
                         )
+
+
+                        val linkedLink = userProfile?.linkedAccounts?.get("linkedin")
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(linkedLink)
+                                        )
+                                    )
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Work,
+                                    contentDescription = "LinkedIn",
+//                                tint = IconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "LinkedIn",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextPrimary,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .weight(1f)
+                            )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = AppColors.Primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 52.dp),
+                            color = AppColors.Divider,
+                            thickness = 0.5.dp
+                        )
+
+
+                        val githubLink = userProfile?.linkedAccounts?.get("github")
+
+
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(githubLink)
+                                        )
+                                    )
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Code,
+                                    contentDescription = "Github",
+//                                tint = IconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "GitHub",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextPrimary,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .weight(1f)
+                            )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = AppColors.Primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
+
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 52.dp),
+                            color = AppColors.Divider,
+                            thickness = 0.5.dp
+                        )
+
+                        val twitterLink = userProfile?.linkedAccounts?.get("twitter")
+
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(twitterLink)
+                                        )
+                                    )
+
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+//                                .background(IconBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.AlternateEmail,
+                                    contentDescription = "X",
+//                                tint = IconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "Twitter/X",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextPrimary,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .weight(1f)
+                            )
+
+//                        Text(
+//                            text = if (instagramLink != null) "Connected" else "Connect",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = IconTint
+//                        )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = AppColors.Primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
-
-
-
 
 
                     //  HARE IS THE END OF LINK ACCOUNTS
-
-
-
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-                        elevation = CardDefaults.cardElevation(0.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                Icons.Default.ThumbUp,
-                                contentDescription = null,
-                                tint = Color(0xFF835400),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
                 }
-                Spacer(Modifier.height(20.dp))
 
             }
 
