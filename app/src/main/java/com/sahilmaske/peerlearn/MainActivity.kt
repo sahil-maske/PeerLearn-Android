@@ -16,6 +16,7 @@ import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.BlockUsersScreen
 import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
+import com.sahilmaske.peerlearn.ui.Settings.DataUsage
 import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
 import com.sahilmaske.peerlearn.ui.Settings.PresenceManager
 import com.sahilmaske.peerlearn.ui.Settings.PrivacyScreen
@@ -186,7 +187,8 @@ fun PeerLearnApp() {
             PrivacyScreen(
                 onBack = { navController.popBackStack() },
                 onProfileVisibilityClick = { navController.navigate("profile_visibility") },
-                onBlockedUsersClick = {navController.navigate("blocked_users")}
+                onBlockedUsersClick = {navController.navigate("blocked_users")},
+                onDataUsageClick = {navController.navigate("data_usage")}
             )
         }
         composable("profile_visibility") {
@@ -197,6 +199,11 @@ fun PeerLearnApp() {
         composable("blocked_users") {
             BlockUsersScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable("data_usage"){
+            DataUsage (
+                onBack = { navController.popBackStack()}
             )
         }
 
