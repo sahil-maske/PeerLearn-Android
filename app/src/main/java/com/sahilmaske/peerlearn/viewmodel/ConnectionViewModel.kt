@@ -22,6 +22,16 @@ class ConnectionViewModel : ViewModel() {
     private val _connectionStatus = MutableStateFlow<String?>(null) // null, pending, accepted, rejected
     val connectionStatus: StateFlow<String?> = _connectionStatus.asStateFlow()
 
+    // NEW: id of the current connections/{id} doc for the pair being watched by
+    // listenConnectionStatus, plus who originally sent the request. UI needs both
+    // to cancel a pending request or break/block an accepted one without an
+    // extra Firestore read.
+    private val _activeConnectionId = MutableStateFlow<String?>(null)
+    val activeConnectionId: StateFlow<String?> = _activeConnectionId.asStateFlow()
+
+    private val _activeRequestedBy = MutableStateFlow<String?>(null)
+    val activeRequestedBy: StateFlow<String?> = _activeRequestedBy.asStateFlow()
+
     private val _incomingRequests = MutableStateFlow<List<Connection>>(emptyList())
     val incomingRequests: StateFlow<List<Connection>> = _incomingRequests.asStateFlow()
 
@@ -43,17 +53,42 @@ class ConnectionViewModel : ViewModel() {
     private var countAsUserA = 0
     private var countAsUserB = 0
 
+    // NEW: block relationship for whichever pair listenBlockStatus is currently
+    // watching.
+    //   "none"          -> neither side has blocked the other
+    //   "blockedByMe"   -> current user blocked the target
+    //   "blockedByThem" -> target blocked the current user
+    //   "mutual"        -> both directions blocked (defensive case)
+    private val _blockStatus = MutableStateFlow("none")
+    val blockStatus: StateFlow<String> = _blockStatus.asStateFlow()
+
     private var connectionListener: ListenerRegistration? = null
     private var incomingListener: ListenerRegistration? = null
     private var swapListener: ListenerRegistration? = null
     private var connectionCountListenerA: ListenerRegistration? = null
     private var connectionCountListenerB: ListenerRegistration? = null
 
+    // NEW: two separate listeners because Firestore can't OR across two
+    // different document paths in one query — one watches "did I block them",
+    // the other watches "did they block me".
+    private var blockedByMeListener: ListenerRegistration? = null
+    private var blockedByThemListener: ListenerRegistration? = null
+    private var iBlockedThem = false
+    private var theyBlockedMe = false
+
     // ---------- HELPER ----------
 
     // Same deterministic pattern jo tune ChatViewModel me use kiya hai
     private fun buildConnectionId(userA: String, userB: String): String {
         return listOf(userA, userB).sorted().joinToString("_")
+    }
+
+    // NEW: blockedUsers doc id. Unlike connections, a block is DIRECTIONAL
+    // (A blocking B is not the same relationship as B blocking A), so we can't
+    // sort the pair the way buildConnectionId does — direction has to be baked
+    // into the id itself.
+    private fun buildBlockId(blockerId: String, blockedId: String): String {
+        return "${blockerId}_blocks_$blockedId"
     }
 
     // ---------- CONNECTION REQUESTS ----------
@@ -236,11 +271,153 @@ class ConnectionViewModel : ViewModel() {
         }
     }
 
-    // Remove/cancel a connection.
+    // NEW: Cancel a request YOU sent while it's still pending. Same underlying
+    // delete as breakConnection — kept as a separate, clearly-named function so
+    // the UI intent stays obvious at the call site.
+    fun cancelConnectionRequest(
+        connectionId: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        db.collection("connections")
+            .document(connectionId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d("ConnectionVM", "Cancelled pending request: $connectionId")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.e("ConnectionVM", "Failed to cancel request: $connectionId", e)
+                onFailure(e)
+            }
+    }
+
+    // NEW: Break an existing ACCEPTED connection. Deliberately does NOT touch
+    // the conversations/messages doc — chat history stays intact, this only
+    // removes the connection so "Connect" can be sent again later and the
+    // profile button flips back to the swap-to-connect state.
+    fun breakConnection(
+        connectionId: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        db.collection("connections")
+            .document(connectionId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d("ConnectionVM", "Connection broken: $connectionId")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.e("ConnectionVM", "Failed to break connection: $connectionId", e)
+                onFailure(e)
+            }
+    }
+
+    // Kept so any existing call sites don't break — prefer cancelConnectionRequest
+    // or breakConnection going forward since they make the intent explicit.
+    @Deprecated(
+        "Use cancelConnectionRequest or breakConnection for clearer intent",
+        ReplaceWith("breakConnection(connectionId)")
+    )
     fun cancelOrRemoveConnection(connectionId: String, userA: String, userB: String, wasAccepted: Boolean) {
         db.collection("connections")
             .document(connectionId)
             .delete()
+    }
+
+    // NEW: Block targetUserId.
+    //  1. Deletes any existing connection doc between the two (pending OR
+    //     accepted) so the blocked user immediately disappears from the
+    //     Connect/Pending/Message state.
+    //  2. Writes a directional blockedUsers doc so listenBlockStatus (and,
+    //     ideally, a Firestore security rule) can check the relationship.
+    // NOTE: this does not enforce the block server-side by itself — pair it
+    // with a Firestore rule that checks blockedUsers before allowing a new
+    // connections/{id} write, otherwise a blocked user's client could still
+    // attempt to send a request.
+    fun blockUser(
+        currentUserId: String,
+        targetUserId: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        val connectionId = buildConnectionId(currentUserId, targetUserId)
+        val blockId = buildBlockId(currentUserId, targetUserId)
+
+        val blockData = hashMapOf(
+            "blockerId" to currentUserId,
+            "blockedId" to targetUserId,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+
+        db.collection("connections").document(connectionId).delete()
+            .addOnCompleteListener {
+                // Proceed regardless of whether a connection doc existed to delete —
+                // blocking should still succeed even if there was never a connection.
+                db.collection("blockedUsers").document(blockId).set(blockData)
+                    .addOnSuccessListener {
+                        Log.d("ConnectionVM", "Blocked user: $blockId")
+                        onSuccess()
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("ConnectionVM", "Failed to block user: $blockId", e)
+                        onFailure(e)
+                    }
+            }
+    }
+
+    // NEW: Reverse of blockUser. Does not restore any connection that existed
+    // before the block — the other user would need to send a fresh request.
+    fun unblockUser(
+        currentUserId: String,
+        targetUserId: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        val blockId = buildBlockId(currentUserId, targetUserId)
+        db.collection("blockedUsers").document(blockId).delete()
+            .addOnSuccessListener {
+                Log.d("ConnectionVM", "Unblocked user: $blockId")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.e("ConnectionVM", "Failed to unblock user: $blockId", e)
+                onFailure(e)
+            }
+    }
+
+    // NEW: Real-time — watches BOTH directions of the block relationship
+    // between currentUserId and targetUserId. Call this alongside
+    // listenConnectionStatus whenever ProfileScreen opens someone else's profile.
+    fun listenBlockStatus(currentUserId: String, targetUserId: String) {
+        blockedByMeListener?.remove()
+        blockedByThemListener?.remove()
+
+        blockedByMeListener = db.collection("blockedUsers")
+            .document(buildBlockId(currentUserId, targetUserId))
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                iBlockedThem = snapshot?.exists() == true
+                updateBlockStatus()
+            }
+
+        blockedByThemListener = db.collection("blockedUsers")
+            .document(buildBlockId(targetUserId, currentUserId))
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                theyBlockedMe = snapshot?.exists() == true
+                updateBlockStatus()
+            }
+    }
+
+    private fun updateBlockStatus() {
+        _blockStatus.value = when {
+            iBlockedThem && theyBlockedMe -> "mutual"
+            iBlockedThem -> "blockedByMe"
+            theyBlockedMe -> "blockedByThem"
+            else -> "none"
+        }
     }
 
     // NEW: call this for whichever uid's profile is being shown (own or someone else's).
@@ -270,6 +447,8 @@ class ConnectionViewModel : ViewModel() {
     }
 
     // Real-time listener: use this on ProfileScreen to show Connect/Pending/Message button
+    // UPDATED: also populates activeConnectionId + activeRequestedBy so the UI can
+    // cancel/break/block without an extra query.
     fun listenConnectionStatus(currentUserId: String, targetUserId: String) {
         connectionListener?.remove()
         val connectionId = buildConnectionId(currentUserId, targetUserId)
@@ -279,9 +458,13 @@ class ConnectionViewModel : ViewModel() {
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null || !snapshot.exists()) {
                     _connectionStatus.value = null
+                    _activeConnectionId.value = null
+                    _activeRequestedBy.value = null
                     return@addSnapshotListener
                 }
                 _connectionStatus.value = snapshot.getString("status")
+                _activeConnectionId.value = snapshot.id
+                _activeRequestedBy.value = snapshot.getString("requestedBy")
             }
     }
 
@@ -376,5 +559,7 @@ class ConnectionViewModel : ViewModel() {
         swapListener?.remove()
         connectionCountListenerA?.remove()
         connectionCountListenerB?.remove()
+        blockedByMeListener?.remove()
+        blockedByThemListener?.remove()
     }
 }

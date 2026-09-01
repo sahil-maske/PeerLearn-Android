@@ -258,46 +258,49 @@ fun PrivacyScreenContent(
                     )
 
                     // Row 3: Show Phone Number to Connections
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onShowPhoneNumberChange(!uiState.showPhoneNumber) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(IconBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Phone,
-                                contentDescription = "Show Phone Number",
-                                tint = IconTint,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = "SHOW PHONE NUMBER TO CONNECTIONS",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextSecondary,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 20.dp)
-                        )
-                        Switch(
-                            checked = uiState.showPhoneNumber,
-                            onCheckedChange = onShowPhoneNumberChange,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = AppColors.Surface,
-                                checkedTrackColor = AppColors.Primary
-                            )
-                        )
-                    }
+//                    Row(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .clickable { onShowPhoneNumberChange(!uiState.showPhoneNumber) }
+//                            .padding(horizontal = 16.dp, vertical = 12.dp),
+//                        verticalAlignment = Alignment.CenterVertically
+//                    ) {
+//                        Box(
+//                            modifier = Modifier
+//                                .size(36.dp)
+//                                .clip(RoundedCornerShape(10.dp))
+//                                .background(IconBg),
+//                            contentAlignment = Alignment.Center
+//                        ) {
+//                            Icon(
+//                                Icons.Default.Phone,
+//                                contentDescription = "Show Phone Number",
+//                                tint = IconTint,
+//                                modifier = Modifier.size(20.dp)
+//                            )
+//                        }
+//                        Text(
+//                            text = "SHOW PHONE NUMBER TO CONNECTIONS",
+//                            fontSize = 13.sp,
+//                            fontWeight = FontWeight.Medium,
+//                            color = AppColors.TextSecondary,
+//                            letterSpacing = 0.5.sp,
+//                            modifier = Modifier
+//                                .weight(1f)
+//                                .padding(horizontal = 20.dp)
+//                        )
+//                        Switch(
+//                            checked = uiState.showPhoneNumber,
+//                            onCheckedChange = onShowPhoneNumberChange,
+//                            colors = SwitchDefaults.colors(
+//                                checkedThumbColor = AppColors.Surface,
+//                                checkedTrackColor = AppColors.Primary
+//                            )
+//                        )
+//                    }
+
+// HIDING THIS DUE TO THE SEFTY RESIONS
+
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 52.dp),
                         color = AppColors.Divider,

@@ -2,10 +2,12 @@ package com.sahilmaske.peerlearn.ui.home
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -62,6 +64,8 @@ import com.sahilmaske.peerlearn.model.User
 import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.ui.components.SlideToSwapButton
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.viewmodel.ConnectionActionMode
+import com.sahilmaske.peerlearn.viewmodel.ConnectionActionsSheet
 import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -151,12 +155,18 @@ fun ProfileScreen(
     // ---------------- Connection state (only matters when viewing someone else's profile) ----------------
     val connectionStatus by connectionViewModel.connectionStatus.collectAsState()
 
+    // NEW: id of the live connections/{id} doc + who sent it, so cancel/break/block
+    // can act on it directly. NEW: block relationship in either direction.
+    val activeConnectionId by connectionViewModel.activeConnectionId.collectAsState()
+    val activeRequestedBy by connectionViewModel.activeRequestedBy.collectAsState()
+    val blockStatus by connectionViewModel.blockStatus.collectAsState()
+
+    // NEW: controls the cancel/break/block bottom sheet.
+    var showConnectionActionsSheet by remember { mutableStateOf(false) }
+
     val canViewFullProfile = isViewingOwnProfile ||
             userProfile?.profileVisibility != "Connections Only" ||
             connectionStatus == "accepted"
-
-    // Live connection status from the real connections collection.
-
 
     // Live post count from the real posts collection (see ProfileViewModel.listenPostCount).
     val postCount by viewModel.postCount.collectAsState()
@@ -176,6 +186,7 @@ fun ProfileScreen(
         if (isViewingOwnProfile) return@LaunchedEffect
         val myUid = loggedInUid.value ?: return@LaunchedEffect
         connectionViewModel.listenConnectionStatus(myUid, profileUidToWatch)
+        connectionViewModel.listenBlockStatus(myUid, profileUidToWatch) // NEW: watch both block directions too
     }
 
     // Once the real Firestore listener confirms "pending" (or beyond), drop the
@@ -385,6 +396,43 @@ fun ProfileScreen(
             }
         }
     }
+
+    // ---------------- Cancel / Break / Block bottom sheet ----------------
+    // NEW: single sheet reused for all three destructive connection actions,
+    // plus unblock. Which options it shows is driven by `mode`, computed from
+    // the same connectionStatus/blockStatus/activeRequestedBy already on screen.
+    ConnectionActionsSheet(
+        show = showConnectionActionsSheet,
+        mode = when {
+            blockStatus == "blockedByMe" -> ConnectionActionMode.UNBLOCK
+            connectionStatus == "accepted" -> ConnectionActionMode.ACCEPTED
+            connectionStatus == "pending" && activeRequestedBy == loggedInUid.value -> ConnectionActionMode.PENDING_SENT
+            else -> ConnectionActionMode.NONE
+        },
+        onDismiss = { showConnectionActionsSheet = false },
+        onBreakConnection = {
+            val connectionId = activeConnectionId ?: return@ConnectionActionsSheet
+            connectionViewModel.breakConnection(connectionId)
+            showConnectionActionsSheet = false
+        },
+        onCancelRequest = {
+            val connectionId = activeConnectionId ?: return@ConnectionActionsSheet
+            connectionViewModel.cancelConnectionRequest(connectionId)
+            showConnectionActionsSheet = false
+        },
+        onBlockUser = {
+            val myUid = loggedInUid.value ?: return@ConnectionActionsSheet
+            val otherUid = uid ?: return@ConnectionActionsSheet
+            connectionViewModel.blockUser(myUid, otherUid)
+            showConnectionActionsSheet = false
+        },
+        onUnblockUser = {
+            val myUid = loggedInUid.value ?: return@ConnectionActionsSheet
+            val otherUid = uid ?: return@ConnectionActionsSheet
+            connectionViewModel.unblockUser(myUid, otherUid)
+            showConnectionActionsSheet = false
+        }
+    )
 
     // ---------------- Main screen content ----------------
     // Root Box centers the content column on wide screens; on phones it just fills the width.
@@ -616,27 +664,94 @@ fun ProfileScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Edit Profile", fontWeight = FontWeight.Medium, color = AppColors.Primary)
                     }
+                } else if (blockStatus == "blockedByThem") {
+                    // NEW: they blocked me — no action is possible from here, so just
+                    // show a neutral, disabled state instead of a Connect/Message button.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = horizontalPadding)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.SecondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Unavailable", color = AppColors.TextSecondary, fontWeight = FontWeight.Medium)
+                    }
                 } else {
                     when {
-                        connectionStatus == "accepted" -> {
-                            Button(
-                                onClick = {
-                                    val myUid = loggedInUid.value ?: return@Button
-                                    val otherUid = uid ?: return@Button
-                                    // Sorting both UIDs keeps the chat id identical no matter who opens the chat first.
-                                    val chatId = listOf(myUid, otherUid).sorted().joinToString("_")
-                                    onNavigateToChat(chatId)
-                                },
+                        // NEW: I've blocked them — tapping opens the sheet to unblock.
+                        blockStatus == "blockedByMe" -> {
+                            OutlinedButton(
+                                onClick = { showConnectionActionsSheet = true },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = horizontalPadding)
                                     .height(48.dp),
                                 shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
+                                border = BorderStroke(1.dp, AppColors.Error),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Error)
                             ) {
-                                Text("Message", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
+                                Text("Blocked \u2014 Tap to Unblock", fontWeight = FontWeight.Medium)
                             }
                         }
+                        connectionStatus == "accepted" -> {
+                            // NEW: Message button now shares the row with a "\u22ee" menu button
+                            // that opens Break Connection / Block User.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = horizontalPadding),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        val myUid = loggedInUid.value ?: return@Button
+                                        val otherUid = uid ?: return@Button
+                                        // Sorting both UIDs keeps the chat id identical no matter who opens the chat first.
+                                        val chatId = listOf(myUid, otherUid).sorted().joinToString("_")
+                                        onNavigateToChat(chatId)
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary)
+                                ) {
+                                    Text("Message", fontWeight = FontWeight.Medium, color = AppColors.TextWhite)
+                                }
+                                OutlinedButton(
+                                    onClick = { showConnectionActionsSheet = true },
+                                    modifier = Modifier
+                                        .height(48.dp)
+                                        .width(48.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, AppColors.Divider),
+                                    contentPadding = PaddingValues(0.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Icon)
+                                ) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Connection options")
+                                }
+                            }
+                        }
+                        // NEW: I'm the one who sent this pending request — tapping opens
+                        // the sheet to cancel it (or block instead).
+                        connectionStatus == "pending" && activeRequestedBy == loggedInUid.value -> {
+                            OutlinedButton(
+                                onClick = { showConnectionActionsSheet = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = horizontalPadding)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, AppColors.Divider),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.TextPrimary)
+                            ) {
+                                Text("Request Pending \u00b7 Tap to Cancel", fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        // They sent the request to me — nothing to cancel from this screen
+                        // (accept/reject already lives on NotificationScreen).
                         connectionStatus == "pending" -> {
                             Button(
                                 onClick = {},
@@ -809,7 +924,6 @@ fun ProfileScreen(
                 Spacer(Modifier.height(10.dp))
             }
 
-
             // ---- Recent Recognition ----
             item {
                 if(canViewFullProfile) {
@@ -822,8 +936,6 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .padding(horizontal = horizontalPadding)
                     ) {
-
-
                         Row(
                             modifier = Modifier.padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -853,12 +965,17 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse(instagramLink)
+                                    if (instagramLink != null){
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(instagramLink)
+                                            )
                                         )
-                                    )
+                                    }
+                                    else {
+                                        Toast.makeText(context, "Instagram is not linked", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -867,13 +984,11 @@ fun ProfileScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.CameraAlt,
                                     contentDescription = "Instagram",
-//                                tint = IconTint,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -888,13 +1003,6 @@ fun ProfileScreen(
                                     .weight(1f)
                             )
 
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Icon(
@@ -904,28 +1012,27 @@ fun ProfileScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                         }
-
-
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 52.dp),
                             color = AppColors.Divider,
                             thickness = 0.5.dp
                         )
-
-
-                        val linkedLink = userProfile?.linkedAccounts?.get("linkedin")
-
+                        val linkedLink = userProfile?.linkedAccounts?.get("linkedIn")
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse(linkedLink)
+                                    if(linkedLink !=null){
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(linkedLink)
+                                            )
                                         )
-                                    )
+                                    }
+                                    else {
+                                        Toast.makeText(context, "LinkedIn is Not Linked", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -934,13 +1041,11 @@ fun ProfileScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.Work,
                                     contentDescription = "LinkedIn",
-//                                tint = IconTint,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -954,14 +1059,6 @@ fun ProfileScreen(
                                     .padding(horizontal = 16.dp)
                                     .weight(1f)
                             )
-
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Icon(
@@ -971,29 +1068,28 @@ fun ProfileScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                         }
-
-
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 52.dp),
                             color = AppColors.Divider,
                             thickness = 0.5.dp
                         )
-
-
                         val githubLink = userProfile?.linkedAccounts?.get("github")
-
-
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse(githubLink)
+                                    if (githubLink !=null){
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(githubLink)
+                                            )
                                         )
-                                    )
+                                    }else
+                                    {
+                                        Toast.makeText(context, "Github is Not linked", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -1002,13 +1098,11 @@ fun ProfileScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.Code,
                                     contentDescription = "Github",
-//                                tint = IconTint,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1022,14 +1116,6 @@ fun ProfileScreen(
                                     .padding(horizontal = 16.dp)
                                     .weight(1f)
                             )
-
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Icon(
@@ -1040,28 +1126,28 @@ fun ProfileScreen(
                             )
                         }
 
-
-
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 52.dp),
                             color = AppColors.Divider,
                             thickness = 0.5.dp
                         )
-
                         val twitterLink = userProfile?.linkedAccounts?.get("twitter")
-
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse(twitterLink)
+                                    if (twitterLink !=null){
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(twitterLink)
+                                            )
                                         )
-                                    )
-
+                                    }
+                                    else {
+                                        Toast.makeText(context, "Twitter Is Not Linked", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -1070,17 +1156,14 @@ fun ProfileScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp)),
-//                                .background(IconBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Default.AlternateEmail,
                                     contentDescription = "X",
-//                                tint = IconTint,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-
                             Text(
                                 text = "Twitter/X",
                                 fontSize = 14.sp,
@@ -1090,14 +1173,6 @@ fun ProfileScreen(
                                     .padding(horizontal = 16.dp)
                                     .weight(1f)
                             )
-
-//                        Text(
-//                            text = if (instagramLink != null) "Connected" else "Connect",
-//                            fontSize = 13.sp,
-//                            fontWeight = FontWeight.Medium,
-//                            color = IconTint
-//                        )
-
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Icon(
@@ -1108,13 +1183,9 @@ fun ProfileScreen(
                             )
                         }
                     }
-
-
                     //  HARE IS THE END OF LINK ACCOUNTS
                 }
-
             }
-
 
             // ---- Posts header ----
             item {
