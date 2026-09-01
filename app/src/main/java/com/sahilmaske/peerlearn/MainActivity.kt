@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
+import com.sahilmaske.peerlearn.ui.Settings.BlockUsersScreen
 import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
 import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
 import com.sahilmaske.peerlearn.ui.Settings.PresenceManager
@@ -184,11 +185,17 @@ fun PeerLearnApp() {
         composable("privacy") {
             PrivacyScreen(
                 onBack = { navController.popBackStack() },
-                onProfileVisibilityClick = { navController.navigate("profile_visibility") }
+                onProfileVisibilityClick = { navController.navigate("profile_visibility") },
+                onBlockedUsersClick = {navController.navigate("blocked_users")}
             )
         }
         composable("profile_visibility") {
             ProfileVisibilityScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("blocked_users") {
+            BlockUsersScreen(
                 onBack = { navController.popBackStack() }
             )
         }

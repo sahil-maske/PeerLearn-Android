@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.sahilmaske.peerlearn.model.Connection
 import com.sahilmaske.peerlearn.model.SwapRequest
+import com.sahilmaske.peerlearn.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +63,9 @@ class ConnectionViewModel : ViewModel() {
     private val _blockStatus = MutableStateFlow("none")
     val blockStatus: StateFlow<String> = _blockStatus.asStateFlow()
 
+    private val _blockedUsers = MutableStateFlow<List<User>>(emptyList())
+    val blockedUsers: StateFlow<List<User>> = _blockedUsers.asStateFlow()
+
     private var connectionListener: ListenerRegistration? = null
     private var incomingListener: ListenerRegistration? = null
     private var swapListener: ListenerRegistration? = null
@@ -73,6 +77,7 @@ class ConnectionViewModel : ViewModel() {
     // the other watches "did they block me".
     private var blockedByMeListener: ListenerRegistration? = null
     private var blockedByThemListener: ListenerRegistration? = null
+    private var blockedUsersListListener: ListenerRegistration? = null
     private var iBlockedThem = false
     private var theyBlockedMe = false
 
@@ -411,6 +416,51 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
+    // NEW: listen to the list of users blocked by currentUserId.
+    // Fetches full User objects for each block relationship so the UI
+    // can show names/avatars in the Blocked Users list.
+    fun listenBlockedUsers(currentUserId: String) {
+        blockedUsersListListener?.remove()
+
+        blockedUsersListListener = db.collection("blockedUsers")
+            .whereEqualTo("blockerId", currentUserId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                val blockedUids = snapshot.documents.mapNotNull { it.getString("blockedId") }
+                if (blockedUids.isEmpty()) {
+                    _blockedUsers.value = emptyList()
+                    return@addSnapshotListener
+                }
+
+                // Fetch details for each blocked UID
+                // In a production app with many blocks, you might want to batch this
+                // or use a different strategy, but for a standard blocked list this is fine.
+                val users = mutableListOf<User>()
+                var fetchedCount = 0
+
+                blockedUids.forEach { uid ->
+                    db.collection("users").document(uid).get()
+                        .addOnSuccessListener { userDoc ->
+                            val user = userDoc.toObject(User::class.java)
+                            if (user != null) {
+                                users.add(user)
+                            }
+                            fetchedCount++
+                            if (fetchedCount == blockedUids.size) {
+                                _blockedUsers.value = users
+                            }
+                        }
+                        .addOnFailureListener {
+                            fetchedCount++
+                            if (fetchedCount == blockedUids.size) {
+                                _blockedUsers.value = users
+                            }
+                        }
+                }
+            }
+    }
+
     private fun updateBlockStatus() {
         _blockStatus.value = when {
             iBlockedThem && theyBlockedMe -> "mutual"
@@ -561,5 +611,6 @@ class ConnectionViewModel : ViewModel() {
         connectionCountListenerB?.remove()
         blockedByMeListener?.remove()
         blockedByThemListener?.remove()
+        blockedUsersListListener?.remove()
     }
 }
