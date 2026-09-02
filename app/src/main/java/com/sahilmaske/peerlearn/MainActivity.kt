@@ -20,6 +20,7 @@ import com.sahilmaske.peerlearn.ui.Settings.DataUsage
 import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
 import com.sahilmaske.peerlearn.ui.Settings.PresenceManager
 import com.sahilmaske.peerlearn.ui.Settings.PrivacyScreen
+import com.sahilmaske.peerlearn.ui.Settings.ProfileInfo
 import com.sahilmaske.peerlearn.ui.Settings.ProfileVisibilityScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
 import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
@@ -203,6 +204,12 @@ fun PeerLearnApp() {
         }
         composable("data_usage"){
             DataUsage (
+                onBack = { navController.popBackStack()},
+                onProfileInfoClick = {navController.navigate("profile_info")}
+            )
+        }
+        composable("profile_info"){
+            ProfileInfo(
                 onBack = { navController.popBackStack()}
             )
         }

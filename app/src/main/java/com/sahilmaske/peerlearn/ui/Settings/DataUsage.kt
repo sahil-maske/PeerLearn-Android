@@ -55,7 +55,8 @@ private val IconTint = Color(0xFF534AB7)
 
 @Composable
 fun DataUsage(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onProfileInfoClick : () -> Unit = {}
 ){
     var hideOnlineStatus by remember { mutableStateOf(false) }
 
@@ -144,7 +145,7 @@ fun DataUsage(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { /* Action */ }
+                    .clickable { onProfileInfoClick() }
                     .padding(horizontal = 18.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -478,6 +479,7 @@ fun DataUsage(
 @Composable
 fun DataUsagePreview(){
     DataUsage(
-        onBack = {}
+        onBack = {},
+        onProfileInfoClick = {}
     )
 }
