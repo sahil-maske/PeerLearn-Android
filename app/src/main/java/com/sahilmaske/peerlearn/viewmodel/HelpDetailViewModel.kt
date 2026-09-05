@@ -6,9 +6,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import com.sahilmaske.peerlearn.model.Comment
-import com.sahilmaske.peerlearn.model.Post
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.Comment
+import com.sahilmaske.peerlearn.data.model.Post
+import com.sahilmaske.peerlearn.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

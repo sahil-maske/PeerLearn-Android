@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.Settings
+package com.sahilmaske.peerlearn.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,10 +51,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
-import com.sahilmaske.peerlearn.ui.home.ImagePickerDialog
+import com.sahilmaske.peerlearn.ui.profile.ImagePickerDialog
 
 // Purple icon badge colors — same language as SettingsScreen
 private val IconBg = Color(0xFFEEEDFE)

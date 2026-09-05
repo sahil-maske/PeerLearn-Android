@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.DarkMode
+package com.sahilmaske.peerlearn.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -43,8 +43,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sahilmaske.peerlearn.ui.DarkMode.AppearancePreferences
-import com.sahilmaske.peerlearn.ui.DarkMode.ThemeMode
+import com.sahilmaske.peerlearn.util.AppearancePreferences
+import com.sahilmaske.peerlearn.util.ThemeMode
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import kotlinx.coroutines.launch
 

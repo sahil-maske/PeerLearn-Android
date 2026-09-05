@@ -3,7 +3,7 @@ package com.sahilmaske.peerlearn.viewmodel
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.sahilmaske.peerlearn.ui.services.FCMService
+import com.sahilmaske.peerlearn.services.FCMService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.model
+package com.sahilmaske.peerlearn.data.model
 
 import com.google.firebase.Timestamp
 
@@ -8,6 +8,7 @@ data class Connection(
     val userB: String = "",
     val status: String = "pending", // pending, accepted, rejected
     val requestedBy: String = "",
+    val matchedSkill: String = "",
     val createdAt: Timestamp? = null // FIX: was Long, but Firestore stores FieldValue.serverTimestamp() as a Timestamp — mismatch caused a crash on toObject()
 )
 

@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.Profile
+package com.sahilmaske.peerlearn.ui.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 

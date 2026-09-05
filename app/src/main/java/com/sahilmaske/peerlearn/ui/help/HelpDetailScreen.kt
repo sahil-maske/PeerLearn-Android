@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home
+package com.sahilmaske.peerlearn.ui.help
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -26,9 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.model.Comment
-import com.sahilmaske.peerlearn.model.Post
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.Comment
+import com.sahilmaske.peerlearn.data.model.Post
+import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.components.ZoomableImageDialog
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.util.timeAgo
@@ -213,7 +213,7 @@ fun PostDetailHeader(
                 Surface(
                     color = AppColors.SkillLearnBg,
                     shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.SkillLearnBorder)
+                    border = BorderStroke(1.dp, AppColors.SkillLearnBorder)
                 ) {
                     Text(
                         text = "Seeking help with: ${post.skill}",

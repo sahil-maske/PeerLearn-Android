@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.Profile
+package com.sahilmaske.peerlearn.ui.profile
 
 import android.net.Uri
 import android.widget.Toast
@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.sahilmaske.peerlearn.ui.home.ImagePickerDialog
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.EditProfileState
 import com.sahilmaske.peerlearn.viewmodel.EditProfileViewModel

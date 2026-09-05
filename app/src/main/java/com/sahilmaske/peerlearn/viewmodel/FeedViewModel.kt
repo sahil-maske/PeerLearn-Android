@@ -8,9 +8,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
-import com.sahilmaske.peerlearn.model.Comment
-import com.sahilmaske.peerlearn.model.PeerSuggestion
-import com.sahilmaske.peerlearn.model.Post
+import com.sahilmaske.peerlearn.data.model.Comment
+import com.sahilmaske.peerlearn.data.model.PeerSuggestion
+import com.sahilmaske.peerlearn.data.model.Post
 import com.sahilmaske.peerlearn.util.calculateMatchPercentage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

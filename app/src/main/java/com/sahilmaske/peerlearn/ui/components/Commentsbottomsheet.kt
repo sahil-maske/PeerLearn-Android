@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home.HomeScreenComponents
+package com.sahilmaske.peerlearn.ui.components
 
 
 import androidx.compose.foundation.background
@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.sahilmaske.peerlearn.model.Comment
+import com.sahilmaske.peerlearn.data.model.Comment
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.util.timeAgo
 

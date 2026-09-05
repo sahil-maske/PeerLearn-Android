@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.viewmodel
+package com.sahilmaske.peerlearn.ui.components
 
 
 import androidx.compose.foundation.clickable

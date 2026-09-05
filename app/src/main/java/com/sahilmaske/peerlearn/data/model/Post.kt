@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.model
+package com.sahilmaske.peerlearn.data.model
 
 
 

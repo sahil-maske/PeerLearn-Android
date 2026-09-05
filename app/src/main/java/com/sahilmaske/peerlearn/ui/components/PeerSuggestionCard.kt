@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home.HomeScreenComponents
+package com.sahilmaske.peerlearn.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,11 +35,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.google.firebase.firestore.FirebaseFirestore
-import com.sahilmaske.peerlearn.model.PeerSuggestion
+import com.sahilmaske.peerlearn.data.model.PeerSuggestion
 
 private val TealPrimary = Color(0xFF0F6E6E)
 private val TealChipBg = Color(0xFFB9E8E4)
@@ -198,8 +198,8 @@ private fun DashedConnectButton(onClick: () -> Unit) {
 // Dashed border drawn manually since Compose has no built-in dashed BorderStroke
 private fun Modifier.dashedBorder(
     color: Color,
-    strokeWidth: androidx.compose.ui.unit.Dp,
-    cornerRadius: androidx.compose.ui.unit.Dp
+    strokeWidth: Dp,
+    cornerRadius: Dp
 ): Modifier = this.drawWithContent {
     drawContent()
     val stroke = Stroke(

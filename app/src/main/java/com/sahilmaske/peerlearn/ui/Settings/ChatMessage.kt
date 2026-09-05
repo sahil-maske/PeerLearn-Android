@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.Settings
+package com.sahilmaske.peerlearn.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

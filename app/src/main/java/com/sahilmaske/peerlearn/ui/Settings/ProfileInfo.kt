@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.Settings
+package com.sahilmaske.peerlearn.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -163,7 +163,7 @@ fun ProfileInfo(
 
             ProfileInfoItem(
                 icon = Icons.Default.EmojiObjects,
-                label = "Know Skills",
+                label = "Known Skills",
                 value = userProfile?.knownSkills?.joinToString(", ")?.takeIf { it.isNotEmpty() } ?: "Not set"
             )
             ProfileInfoItem(

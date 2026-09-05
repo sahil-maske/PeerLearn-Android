@@ -8,8 +8,8 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
-import com.sahilmaske.peerlearn.model.Message
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.Message
+import com.sahilmaske.peerlearn.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

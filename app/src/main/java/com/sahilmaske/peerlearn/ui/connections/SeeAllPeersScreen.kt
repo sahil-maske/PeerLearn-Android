@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home.HomeScreenComponents
+package com.sahilmaske.peerlearn.ui.connections
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.sahilmaske.peerlearn.ui.components.PeerRowCard
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 

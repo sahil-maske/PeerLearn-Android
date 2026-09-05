@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home
+package com.sahilmaske.peerlearn.navigation
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -45,7 +46,10 @@ import kotlinx.coroutines.launch
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.ui.notifications.NotificationScreen
+import com.sahilmaske.peerlearn.ui.home.HomeScreen
+import com.sahilmaske.peerlearn.ui.home.PostScreen
+import com.sahilmaske.peerlearn.ui.chat.ChatScreen
+import com.sahilmaske.peerlearn.ui.profile.ProfileScreen
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -186,7 +190,7 @@ fun NaviScreen(
 @Composable
 fun AnimatedBottomNav(
     items: List<String>,
-    icons: List<androidx.compose.ui.graphics.vector.ImageVector>,
+    icons: List<ImageVector>,
     selectedItem: Int,
     onItemSelected: (Int) -> Unit
 ) {

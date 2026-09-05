@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.services
+package com.sahilmaske.peerlearn.services
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

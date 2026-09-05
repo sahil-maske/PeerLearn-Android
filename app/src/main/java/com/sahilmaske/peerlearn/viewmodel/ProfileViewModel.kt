@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.sahilmaske.peerlearn.model.Post
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.Post
+import com.sahilmaske.peerlearn.data.model.User
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

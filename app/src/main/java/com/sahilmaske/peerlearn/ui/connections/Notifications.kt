@@ -1,5 +1,6 @@
-package com.sahilmaske.peerlearn.ui.notifications
+package com.sahilmaske.peerlearn.ui.connections
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.model.Connection
+import com.sahilmaske.peerlearn.data.model.Connection
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 
@@ -38,7 +39,8 @@ private const val EXPANDED_BREAKPOINT = 840 // dp
 @Composable
 fun NotificationScreen(
     connectionViewModel: ConnectionViewModel = viewModel(),
-    onNavigateToHome: () -> Unit = {}
+    onNavigateToHome: () -> Unit = {},
+    onNavigateToChat: (String) -> Unit = {}
 ) {
     val myUid = try {
         FirebaseAuth.getInstance().currentUser?.uid
@@ -68,8 +70,10 @@ fun NotificationScreen(
                 accept = true,
                 userA = request.userA,
                 userB = request.userB,
-                requestedBy = request.requestedBy
+                requestedBy = request.requestedBy,
+                matchedSkill = request.matchedSkill
             )
+            onNavigateToChat(request.connectionId)
         },
         onDeny = { request ->
             connectionViewModel.respondToConnection(
@@ -77,7 +81,8 @@ fun NotificationScreen(
                 accept = false,
                 userA = request.userA,
                 userB = request.userB,
-                requestedBy = request.requestedBy
+                requestedBy = request.requestedBy,
+                matchedSkill = request.matchedSkill
             )
         }
     )
@@ -259,7 +264,7 @@ fun ConnectionRequestCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Filled.SwapHoriz,
+                        Icons.Default.SwapHoriz,
                         contentDescription = null,
                         tint = Color(0xFFB5651D),
                         modifier = Modifier.size(20.dp)
@@ -302,7 +307,7 @@ fun ConnectionRequestCard(
                     onClick = onDeny,
                     modifier = Modifier.weight(1f).height(40.dp),
                     shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Error)
+                    border = BorderStroke(1.dp, AppColors.Error)
                 ) {
                     Text("Deny", fontWeight = FontWeight.Medium, color = AppColors.Error)
                 }

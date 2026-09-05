@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home
+package com.sahilmaske.peerlearn.ui.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,8 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.sahilmaske.peerlearn.model.Conversation
+import com.sahilmaske.peerlearn.data.model.Conversation
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ChatViewModel
 
@@ -250,7 +251,7 @@ fun ConversationItem(convo: Conversation, navController: NavController) {
 @Preview(showBackground = true)
 @Composable
 fun ChatScreenPreview() {
-    val navController = androidx.navigation.compose.rememberNavController()
+    val navController = rememberNavController()
     ChatScreenContent(
         navController = navController,
         conversations = listOf(

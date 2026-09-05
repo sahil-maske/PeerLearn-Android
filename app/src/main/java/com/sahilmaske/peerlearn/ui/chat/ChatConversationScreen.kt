@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.home
+package com.sahilmaske.peerlearn.ui.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,8 +32,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.model.Message
-import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.data.model.Message
+import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ChatConversationViewModel
 import com.sahilmaske.peerlearn.viewmodel.PeerInfo

@@ -1,4 +1,4 @@
-package com.sahilmaske.peerlearn.ui.Settings
+package com.sahilmaske.peerlearn.ui.settings
 
 import android.content.Intent
 import android.net.Uri

@@ -17,34 +17,34 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.ui.DarkMode.AppearancePreferences
-import com.sahilmaske.peerlearn.ui.DarkMode.ThemeMode
-import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
-import com.sahilmaske.peerlearn.ui.Profile.EditProfileScreen
-import com.sahilmaske.peerlearn.ui.services.FCMService
+import com.sahilmaske.peerlearn.util.AppearancePreferences
+import com.sahilmaske.peerlearn.util.ThemeMode
+import com.sahilmaske.peerlearn.ui.profile.ProfileSetupScreen
+import com.sahilmaske.peerlearn.ui.profile.EditProfileScreen
+import com.sahilmaske.peerlearn.services.FCMService
 import com.sahilmaske.peerlearn.ui.components.WebViewScreen
-import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
-import com.sahilmaske.peerlearn.ui.Settings.BlockUsersScreen
-import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
-import com.sahilmaske.peerlearn.ui.Settings.DataUsage
-import com.sahilmaske.peerlearn.ui.Settings.LinkAccounts
-import com.sahilmaske.peerlearn.ui.Settings.PresenceManager
-import com.sahilmaske.peerlearn.ui.Settings.PrivacyScreen
-import com.sahilmaske.peerlearn.ui.Settings.ProfileInfo
-import com.sahilmaske.peerlearn.ui.Settings.ProfileVisibilityScreen
-import com.sahilmaske.peerlearn.ui.Settings.ReportProblemScreen
-import com.sahilmaske.peerlearn.ui.Settings.ReportUserScreen
-import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
-import com.sahilmaske.peerlearn.ui.Settings.SupportScreen
-import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
+import com.sahilmaske.peerlearn.ui.settings.AccountScreen
+import com.sahilmaske.peerlearn.ui.settings.BlockUsersScreen
+import com.sahilmaske.peerlearn.ui.settings.ChangePasswordScreen
+import com.sahilmaske.peerlearn.ui.settings.DataUsage
+import com.sahilmaske.peerlearn.ui.settings.LinkAccounts
+import com.sahilmaske.peerlearn.services.PresenceManager
+import com.sahilmaske.peerlearn.ui.settings.PrivacyScreen
+import com.sahilmaske.peerlearn.ui.settings.ProfileInfo
+import com.sahilmaske.peerlearn.ui.settings.ProfileVisibilityScreen
+import com.sahilmaske.peerlearn.ui.settings.ReportProblemScreen
+import com.sahilmaske.peerlearn.ui.settings.ReportUserScreen
+import com.sahilmaske.peerlearn.ui.settings.SettingsScreen
+import com.sahilmaske.peerlearn.ui.settings.SupportScreen
+import com.sahilmaske.peerlearn.ui.auth.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
-import com.sahilmaske.peerlearn.ui.home.ChatConversationScreen
-import com.sahilmaske.peerlearn.ui.home.HelpDetailScreen
-import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.SeeAllPeersScreen
-import com.sahilmaske.peerlearn.ui.home.NaviScreen
-import com.sahilmaske.peerlearn.ui.home.ProfileScreen
-import com.sahilmaske.peerlearn.ui.notifications.NotificationScreen
+import com.sahilmaske.peerlearn.ui.chat.ChatConversationScreen
+import com.sahilmaske.peerlearn.ui.help.HelpDetailScreen
+import com.sahilmaske.peerlearn.ui.connections.SeeAllPeersScreen
+import com.sahilmaske.peerlearn.navigation.NaviScreen
+import com.sahilmaske.peerlearn.ui.profile.ProfileScreen
+import com.sahilmaske.peerlearn.ui.connections.NotificationScreen
 import com.sahilmaske.peerlearn.ui.theme.PeerLearnTheme
 
 class MainActivity : ComponentActivity() {
@@ -126,7 +126,10 @@ fun PeerLearnApp() {
         }
         composable("notifications") {
             NotificationScreen(
-                onNavigateToHome = { navController.popBackStack() }
+                onNavigateToHome = { navController.popBackStack() },
+                onNavigateToChat = { chatId ->
+                    navController.navigate("chat_conversation/$chatId")
+                }
             )
         }
         composable("see_all_peers") {

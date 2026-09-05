@@ -1,8 +1,8 @@
 package com.sahilmaske.peerlearn.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.sahilmaske.peerlearn.model.Post
-import com.sahilmaske.peerlearn.model.PeerSuggestion
+import com.sahilmaske.peerlearn.data.model.Post
+import com.sahilmaske.peerlearn.data.model.PeerSuggestion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

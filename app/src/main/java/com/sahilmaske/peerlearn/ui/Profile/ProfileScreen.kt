@@ -1,6 +1,9 @@
-package com.sahilmaske.peerlearn.ui.home
+package com.sahilmaske.peerlearn.ui.profile
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.FlowRow
@@ -60,12 +63,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import androidx.compose.ui.platform.LocalInspectionMode
-import com.sahilmaske.peerlearn.model.User
-import com.sahilmaske.peerlearn.model.Post
+import androidx.core.content.FileProvider
+import com.sahilmaske.peerlearn.data.model.User
+import com.sahilmaske.peerlearn.data.model.Post
 import com.sahilmaske.peerlearn.ui.components.SlideToSwapButton
 import com.sahilmaske.peerlearn.ui.theme.AppColors
-import com.sahilmaske.peerlearn.viewmodel.ConnectionActionMode
-import com.sahilmaske.peerlearn.viewmodel.ConnectionActionsSheet
+import com.sahilmaske.peerlearn.ui.components.ConnectionActionMode
+import com.sahilmaske.peerlearn.ui.components.ConnectionActionsSheet
 import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileState
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
@@ -73,6 +77,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlin.math.max
 import kotlin.math.min
 
@@ -139,6 +148,18 @@ fun ProfileScreen(
 
     val loggedInUid = remember {
         mutableStateOf(if (isPreview) "preview_uid" else FirebaseAuth.getInstance().currentUser?.uid)
+    }
+
+    // NEW: fetch the logged-in user's profile to identify matched skills for icebreakers
+    var loggedInUserProfile by remember { mutableStateOf<User?>(null) }
+    LaunchedEffect(loggedInUid.value) {
+        val myUid = loggedInUid.value
+        if (!isPreview && myUid != null) {
+            FirebaseFirestore.getInstance().collection("users").document(myUid).get()
+                .addOnSuccessListener { doc ->
+                    loggedInUserProfile = doc.toObject(User::class.java)
+                }
+        }
     }
     // Keep loggedInUid in sync if the user signs in/out while this screen is open.
     DisposableEffect(Unit) {
@@ -339,10 +360,10 @@ fun ProfileScreen(
         onDismissRequest = { showImagePickerDialog = false },
         onCameraClick = {
             showImagePickerDialog = false
-            val tempPhotoUri = androidx.core.content.FileProvider.getUriForFile(
+            val tempPhotoUri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.provider",
-                java.io.File.createTempFile("avatar_", ".jpg", context.cacheDir)
+                File.createTempFile("avatar_", ".jpg", context.cacheDir)
             )
             pendingCameraImageUri = tempPhotoUri
             cameraLauncher.launch(tempPhotoUri)
@@ -705,7 +726,7 @@ fun ProfileScreen(
                             }
                         }
                         connectionStatus == "accepted" -> {
-                            // NEW: Message button now shares the row with a "\u22ee" menu button
+                            // NEW: Message button now shares the row with a "⋮" menu button
                             // that opens Break Connection / Block User.
                             Row(
                                 modifier = Modifier
@@ -809,18 +830,28 @@ fun ProfileScreen(
                                 onConfirmed = {
                                     val myUid = loggedInUid.value ?: return@SlideToSwapButton
                                     val otherUid = uid ?: return@SlideToSwapButton
+
+                                    // NEW: find the first skill that the sender wants to learn AND the receiver knows.
+                                    // This matched skill will be used for the automatic icebreaker message.
+                                    val myLearning = loggedInUserProfile?.learningSkills ?: emptyList()
+                                    val theirKnown = userProfile?.knownSkills ?: emptyList()
+                                    val match = myLearning.firstOrNull { skill ->
+                                        theirKnown.any { it.equals(skill, ignoreCase = true) }
+                                    } ?: ""
+
                                     connectionViewModel.sendConnectionRequest(
                                         currentUserId = myUid,
                                         targetUserId = otherUid,
+                                        matchedSkill = match,
                                         onSuccess = {
                                             // Only show "Request Sent" once Firestore actually confirms the write.
                                             requestJustSent = true
                                         },
                                         onFailure = { error ->
-                                            android.widget.Toast.makeText(
+                                            Toast.makeText(
                                                 context,
                                                 "Couldn't send request: ${error.localizedMessage ?: "check your connection"}",
-                                                android.widget.Toast.LENGTH_LONG
+                                                Toast.LENGTH_LONG
                                             ).show()
                                         }
                                     )
@@ -1318,30 +1349,30 @@ fun ImagePickerDialog(
 // Crops the picked image to a square, resizes it, and uploads it to Cloudinary.
 // Returns the resulting (face-cropped) URL, or an empty string if anything failed.
 @OptIn(ExperimentalCoroutinesApi::class)
-suspend fun uploadToCloudinary(context: android.content.Context, imageUri: Uri): String {
+suspend fun uploadToCloudinary(context: Context, imageUri: Uri): String {
     val cloudinaryCloudName = "db7wneko6"
     val cloudinaryUploadPreset = "peerlearn_avatar"
 
     val inputStream = context.contentResolver.openInputStream(imageUri) ?: return ""
-    val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+    val originalBitmap = BitmapFactory.decodeStream(inputStream)
     inputStream.close()
 
     // Crop to a centered square before resizing, so the avatar isn't stretched.
     val squareSide = minOf(originalBitmap.width, originalBitmap.height)
     val cropStartX = (originalBitmap.width - squareSide) / 2
     val cropStartY = (originalBitmap.height - squareSide) / 2
-    val squareBitmap = android.graphics.Bitmap.createBitmap(originalBitmap, cropStartX, cropStartY, squareSide, squareSide)
+    val squareBitmap = Bitmap.createBitmap(originalBitmap, cropStartX, cropStartY, squareSide, squareSide)
 
-    val resizedBitmap = android.graphics.Bitmap.createScaledBitmap(squareBitmap, 400, 400, true)
-    val jpegOutputStream = java.io.ByteArrayOutputStream()
-    resizedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, jpegOutputStream)
+    val resizedBitmap = Bitmap.createScaledBitmap(squareBitmap, 400, 400, true)
+    val jpegOutputStream = ByteArrayOutputStream()
+    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, jpegOutputStream)
     val jpegBytes = jpegOutputStream.toByteArray()
 
     return withContext(Dispatchers.IO) {
         try {
-            val uploadUrl = java.net.URL("https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload")
+            val uploadUrl = URL("https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload")
             val multipartBoundary = "Boundary-${System.currentTimeMillis()}"
-            val connection = uploadUrl.openConnection() as java.net.HttpURLConnection
+            val connection = uploadUrl.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$multipartBoundary")
@@ -1355,7 +1386,7 @@ suspend fun uploadToCloudinary(context: android.content.Context, imageUri: Uri):
 
             val responseBody = connection.inputStream.bufferedReader().readText()
             // Insert Cloudinary's face-aware square-crop transform into the returned URL.
-            org.json.JSONObject(responseBody).getString("secure_url")
+            JSONObject(responseBody).getString("secure_url")
                 .replace("/upload/", "/upload/w_400,h_400,c_thumb,g_face/")
         } catch (e: Exception) {
             e.printStackTrace()

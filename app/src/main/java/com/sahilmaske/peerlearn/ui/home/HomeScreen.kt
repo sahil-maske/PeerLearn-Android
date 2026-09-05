@@ -53,11 +53,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
-import com.sahilmaske.peerlearn.model.PeerSuggestion
-import com.sahilmaske.peerlearn.model.Post
-import com.sahilmaske.peerlearn.model.User
-import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.CommentsBottomSheet
-import com.sahilmaske.peerlearn.ui.home.HomeScreenComponents.PeerSuggestionCard
+import com.sahilmaske.peerlearn.data.model.PeerSuggestion
+import com.sahilmaske.peerlearn.data.model.Post
+import com.sahilmaske.peerlearn.data.model.User
+import com.sahilmaske.peerlearn.ui.components.CommentsBottomSheet
+import com.sahilmaske.peerlearn.ui.components.PeerSuggestionCard
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.util.timeAgo
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
