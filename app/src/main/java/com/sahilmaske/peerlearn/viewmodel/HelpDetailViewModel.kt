@@ -8,6 +8,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.sahilmaske.peerlearn.model.Comment
 import com.sahilmaske.peerlearn.model.Post
+import com.sahilmaske.peerlearn.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -26,7 +27,22 @@ class HelpDetailViewModel : ViewModel() {
     private val _comments = MutableStateFlow<List<Comment>>(emptyList())
     val comments: StateFlow<List<Comment>> = _comments
 
+    // NEW: Map of userId -> User object for real-time profile info in the offers list
+    private val _commentAuthors = MutableStateFlow<Map<String, User>>(emptyMap())
+    val commentAuthors: StateFlow<Map<String, User>> = _commentAuthors
+
     private var commentsListener: ListenerRegistration? = null
+    private var postListener: ListenerRegistration? = null
+
+    fun listenPost(postId: String) {
+        if (postId.isEmpty()) return
+        postListener?.remove()
+        postListener = db.collection("posts").document(postId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                _post.value = snapshot.toObject(Post::class.java)?.copy(id = snapshot.id)
+            }
+    }
 
     fun loadPost(postId: String) {
         if (postId.isEmpty()) return
@@ -43,10 +59,28 @@ class HelpDetailViewModel : ViewModel() {
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
-                _comments.value = snapshot.documents.mapNotNull { doc ->
+                val newComments = snapshot.documents.mapNotNull { doc ->
                     doc.toObject(Comment::class.java)?.copy(id = doc.id)
                 }
+                _comments.value = newComments
+                fetchAuthorProfiles(newComments)
             }
+    }
+
+    private fun fetchAuthorProfiles(comments: List<Comment>) {
+        val uniqueAuthorIds = comments.map { it.authorId }.distinct()
+        val currentAuthors = _commentAuthors.value.toMutableMap()
+        
+        uniqueAuthorIds.forEach { authorId ->
+            if (!currentAuthors.containsKey(authorId)) {
+                db.collection("users").document(authorId).get()
+                    .addOnSuccessListener { doc ->
+                        doc.toObject(User::class.java)?.let { user ->
+                            _commentAuthors.value = _commentAuthors.value + (authorId to user)
+                        }
+                    }
+            }
+        }
     }
 
     fun addComment(postId: String, authorId: String, authorName: String, authorAvatarUrl: String, text: String) {
@@ -89,5 +123,6 @@ class HelpDetailViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         commentsListener?.remove()
+        postListener?.remove()
     }
 }

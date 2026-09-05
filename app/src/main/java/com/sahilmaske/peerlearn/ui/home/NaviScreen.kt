@@ -154,7 +154,8 @@ fun NaviScreen(
 
                 3 -> ProfileScreen(
                     viewModel = profileViewModel,
-                    onSettingsClick = { navController.navigate("settings") }
+                    onSettingsClick = { navController.navigate("settings") },
+                    onEditProfileClick = { navController.navigate("edit_profile") }
                 )
             }
         }

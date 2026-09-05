@@ -98,10 +98,12 @@ fun ProfileScreen(
     connectionViewModel: ConnectionViewModel = viewModel(),
     onNavigateToChat: (String) -> Unit = {},
     onBack: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onEditProfileClick: () -> Unit = {}
 ) {
     // ---------------- Profile data ----------------
     val profileFromFirestore by viewModel.userProfile.collectAsState()
+    val userPosts by viewModel.userPosts.collectAsState()
     val profileLoadState by viewModel.uiState.collectAsState()
 
     val isPreview = LocalInspectionMode.current
@@ -132,6 +134,7 @@ fun ProfileScreen(
         val profileUidToLoad = uid ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
         viewModel.fetchUserProfile(profileUidToLoad)
         viewModel.listenPostCount(profileUidToLoad) // real-time count from actual posts, not a stale counter field
+        viewModel.listenUserPosts(profileUidToLoad) // NEW: real-time posts from actual collection
     }
 
     val loggedInUid = remember {
@@ -297,13 +300,6 @@ fun ProfileScreen(
         }
     }
 
-    // Placeholder posts — swap for real Firestore data later.
-    val placeholderPosts = listOf(
-        Post(id = "1", heading = "Modern Web Development Trends 2024", description = "In this post I walk you through modern web development.", likeCount = 124, commentCount = 18, imageUrl = "purple"),
-        Post(id = "2", heading = "UI/UX Design Principles for Mobile", description = "Learn core principles of mobile UI/UX design.", likeCount = 85, commentCount = 12, imageUrl = "red"),
-        Post(id = "3", heading = "Flutter vs Kotlin", description = "A detailed comparison between Flutter and Kotlin.", likeCount = 60, commentCount = 9, imageUrl = "green"),
-        Post(id = "4", heading = "Clean Architecture in Android", description = "How to structure your Android app using Clean Architecture.", likeCount = 45, commentCount = 7, imageUrl = "orange"),
-    )
 
     // ---------------- Skills dialog (shown when a "Known"/"Learning" chip area is tapped) ----------------
     if (selectedSkillType != null) {
@@ -566,6 +562,19 @@ fun ProfileScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
+                    text = userProfile?.tagline?.takeIf { it.isNotBlank() } ?: "Add a tagline...",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = AppColors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = horizontalPadding)
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
                     text = userProfile?.college ?: "College Name",
                     fontSize = collegeFontSize,
                     fontWeight = FontWeight.Medium,
@@ -651,7 +660,7 @@ fun ProfileScreen(
             item {
                 if (isViewingOwnProfile) {
                     OutlinedButton(
-                        onClick = {},
+                        onClick = onEditProfileClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = horizontalPadding)
@@ -1203,54 +1212,62 @@ fun ProfileScreen(
             }
 
             // ---- Posts grid (2 cols COMPACT, 3 cols MEDIUM, 4 cols EXPANDED) ----
-            items(placeholderPosts.chunked(postGridColumns)) { rowOfPosts ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = horizontalPadding, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    rowOfPosts.forEach { post ->
-                        Card(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(160.dp)
-                                .pointerInput(Unit) {
-                                    detectTapGestures(onLongPress = { selectedPost = post })
-                                },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                        ) {
-                            Box(
+            if (userPosts.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("No posts yet.", color = AppColors.TextSecondary, fontSize = 14.sp)
+                    }
+                }
+            } else {
+                items(userPosts.chunked(postGridColumns)) { rowOfPosts ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = horizontalPadding, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        rowOfPosts.forEach { post ->
+                            Card(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.linearGradient(
-                                            when (post.imageUrl) {
-                                                "purple" -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
-                                                "red" -> listOf(AppColors.Tertiary, AppColors.TertiaryContainer)
-                                                "green" -> listOf(AppColors.Secondary, AppColors.SecondaryContainer)
-                                                "orange" -> listOf(AppColors.TertiaryContainer, AppColors.SecondaryContainer)
-                                                else -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
-                                            }
-                                        )
-                                    )
-                                    .padding(12.dp)
+                                    .weight(1f)
+                                    .height(160.dp)
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(onLongPress = { selectedPost = post })
+                                    },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                             ) {
-                                Text(
-                                    text = post.heading,
-                                    color = AppColors.TextWhite,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.align(Alignment.BottomStart)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.linearGradient(
+                                                when (post.imageUrl) {
+                                                    "purple" -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
+                                                    "red" -> listOf(AppColors.Tertiary, AppColors.TertiaryContainer)
+                                                    "green" -> listOf(AppColors.Secondary, AppColors.SecondaryContainer)
+                                                    "orange" -> listOf(AppColors.TertiaryContainer, AppColors.SecondaryContainer)
+                                                    else -> listOf(AppColors.Primary, AppColors.PrimaryContainer)
+                                                }
+                                            )
+                                        )
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = post.heading,
+                                        color = AppColors.TextWhite,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.align(Alignment.BottomStart)
+                                    )
+                                }
                             }
                         }
-                    }
-                    // Fill remaining slots in the last row so cards don't stretch to fill the gap.
-                    if (rowOfPosts.size < postGridColumns) {
-                        repeat(postGridColumns - rowOfPosts.size) {
-                            Spacer(modifier = Modifier.weight(1f))
+                        // Fill remaining slots in the last row so cards don't stretch to fill the gap.
+                        if (rowOfPosts.size < postGridColumns) {
+                            repeat(postGridColumns - rowOfPosts.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }

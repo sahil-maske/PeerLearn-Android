@@ -1,6 +1,9 @@
 package com.sahilmaske.peerlearn.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +28,8 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.sahilmaske.peerlearn.model.Comment
 import com.sahilmaske.peerlearn.model.Post
+import com.sahilmaske.peerlearn.model.User
+import com.sahilmaske.peerlearn.ui.components.ZoomableImageDialog
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.util.timeAgo
 import com.sahilmaske.peerlearn.viewmodel.HelpDetailViewModel
@@ -35,12 +40,17 @@ import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 fun HelpDetailScreen(
     postId: String,
     onBack: () -> Unit,
+    onNavigateToProfile: (String) -> Unit = {},
     viewModel: HelpDetailViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel()
 ) {
     val post by viewModel.post.collectAsState()
     val comments by viewModel.comments.collectAsState()
+    val authors by viewModel.commentAuthors.collectAsState()
     val userProfile by profileViewModel.userProfile.collectAsState()
+    
+    var showFullscreenImage by remember { mutableStateOf<String?>(null) }
+    
     val currentUserId = remember { mutableStateOf(FirebaseAuth.getInstance().currentUser?.uid ?: "") }
     DisposableEffect(Unit) {
         val auth = FirebaseAuth.getInstance()
@@ -51,9 +61,12 @@ fun HelpDetailScreen(
         onDispose { auth.removeAuthStateListener(listener) }
     }
 
-    LaunchedEffect(postId) {
-        viewModel.loadPost(postId)
+    LaunchedEffect(postId, currentUserId.value) {
+        viewModel.listenPost(postId)
         viewModel.listenComments(postId)
+        if (currentUserId.value.isNotEmpty()) {
+            profileViewModel.fetchUserProfile(currentUserId.value)
+        }
     }
 
     Scaffold(
@@ -97,7 +110,10 @@ fun HelpDetailScreen(
                     .padding(horizontal = 16.dp)
             ) {
                 item {
-                    PostDetailHeader(post!!)
+                    PostDetailHeader(
+                        post = post!!,
+                        onImageClick = { showFullscreenImage = it }
+                    )
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = "Help Offers (${post!!.commentCount})",
@@ -116,9 +132,12 @@ fun HelpDetailScreen(
                     }
                 } else {
                     items(comments) { comment ->
+                        val authorProfile = authors[comment.authorId]
                         HelpOfferRow(
                             comment = comment,
+                            authorProfile = authorProfile,
                             isPostOwner = post!!.authorId == currentUserId.value,
+                            onClick = { onNavigateToProfile(comment.authorId) },
                             onMarkHelpful = {
                                 viewModel.toggleMarkAsHelpful(
                                     postId = postId,
@@ -134,10 +153,20 @@ fun HelpDetailScreen(
             }
         }
     }
+
+    if (showFullscreenImage != null) {
+        ZoomableImageDialog(
+            imageUrl = showFullscreenImage!!,
+            onDismiss = { showFullscreenImage = null }
+        )
+    }
 }
 
 @Composable
-fun PostDetailHeader(post: Post) {
+fun PostDetailHeader(
+    post: Post,
+    onImageClick: (String) -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
@@ -170,7 +199,11 @@ fun PostDetailHeader(post: Post) {
                 AsyncImage(
                     model = post.imageUrl,
                     contentDescription = "Post Image",
-                    modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onImageClick(post.imageUrl) },
                     contentScale = ContentScale.Crop
                 )
             }
@@ -198,28 +231,56 @@ fun PostDetailHeader(post: Post) {
 @Composable
 fun HelpOfferRow(
     comment: Comment,
+    authorProfile: User?,
     isPostOwner: Boolean,
+    onClick: () -> Unit,
     onMarkHelpful: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
-        border = if (comment.isMarkedHelpful) androidx.compose.foundation.BorderStroke(1.5.dp, AppColors.DarkGreen) else null
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = if (comment.isMarkedHelpful) BorderStroke(
+            1.5.dp,
+            AppColors.DarkGreen
+        ) else null
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Circular profile picture
                 AsyncImage(
-                    model = comment.authorAvatarUrl,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp).clip(CircleShape),
+                    model = authorProfile?.avatarUrl ?: comment.authorAvatarUrl,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.SecondaryContainer),
                     contentScale = ContentScale.Crop
                 )
-                Spacer(Modifier.width(8.dp))
+                
+                Spacer(Modifier.width(12.dp))
+                
                 Column(Modifier.weight(1f)) {
-                    Text(comment.authorName, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                    Text(timeAgo(comment.timestamp), color = AppColors.TextSecondary, fontSize = 11.sp)
+                    // Proper name from User doc, fall back to captured name (if not email prefix)
+                    val displayName = authorProfile?.name?.takeIf { it.isNotBlank() } ?: comment.authorName
+                    
+                    Text(
+                        text = displayName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = AppColors.TextPrimary
+                    )
+                    Text(
+                        text = timeAgo(comment.timestamp),
+                        color = AppColors.TextSecondary,
+                        fontSize = 11.sp
+                    )
                 }
+                
                 if (comment.isMarkedHelpful) {
                     Icon(
                         Icons.Default.CheckCircle,
@@ -229,19 +290,29 @@ fun HelpOfferRow(
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(comment.text, fontSize = 14.sp, color = AppColors.TextPrimary)
+            
+            Spacer(Modifier.height(10.dp))
+            
+            Text(
+                text = comment.text,
+                fontSize = 14.sp,
+                color = AppColors.TextPrimary,
+                lineHeight = 20.sp
+            )
             
             if (isPostOwner && !comment.isMarkedHelpful) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = onMarkHelpful,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.SecondaryContainer, contentColor = AppColors.Secondary),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.Primary.copy(alpha = 0.1f),
+                        contentColor = AppColors.Primary
+                    ),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(36.dp)
                 ) {
-                    Text("Mark as Helpful", fontSize = 12.sp)
+                    Text("Mark as Helpful", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

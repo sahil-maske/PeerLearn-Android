@@ -3,6 +3,7 @@ package com.sahilmaske.peerlearn.viewmodel
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.sahilmaske.peerlearn.ui.services.FCMService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -25,6 +26,7 @@ class AuthViewModel : ViewModel() {
         _uiState.value = AuthState.Loading
         auth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener {
+                FCMService.updateCurrentToken()
                 _uiState.value = AuthState.Success
             }
             .addOnFailureListener {
@@ -55,6 +57,7 @@ class AuthViewModel : ViewModel() {
                 firestore.collection("users").document(uid)
                     .set(userMap)
                     .addOnSuccessListener {
+                        FCMService.updateCurrentToken()
                         _uiState.value = AuthState.Success
                     }
                     .addOnFailureListener { e ->

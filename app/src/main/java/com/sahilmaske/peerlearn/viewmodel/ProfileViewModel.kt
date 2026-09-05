@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.sahilmaske.peerlearn.model.Post
 import com.sahilmaske.peerlearn.model.User
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -29,7 +31,11 @@ class ProfileViewModel : ViewModel() {
     private val _postCount = MutableStateFlow(0)
     val postCount: StateFlow<Int> = _postCount
 
+    private val _userPosts = MutableStateFlow<List<Post>>(emptyList())
+    val userPosts: StateFlow<List<Post>> = _userPosts
+
     private var postCountListener: ListenerRegistration? = null
+    private var postsListener: ListenerRegistration? = null
 
     fun fetchUserProfile(uid: String) {
         _uiState.value = ProfileState.Loading
@@ -92,6 +98,19 @@ class ProfileViewModel : ViewModel() {
             }
     }
 
+    fun listenUserPosts(uid: String) {
+        postsListener?.remove()
+        postsListener = db.collection("posts")
+            .whereEqualTo("authorId", uid)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                _userPosts.value = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Post::class.java)?.copy(id = doc.id)
+                }
+            }
+    }
+
 
     fun loadProfile(uid: String?) {
         val targetUid = uid ?: auth.currentUser?.uid
@@ -127,6 +146,7 @@ class ProfileViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         postCountListener?.remove()
+        postsListener?.remove()
     }
 }
 

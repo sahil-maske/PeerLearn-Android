@@ -37,7 +37,24 @@ private val CustomColorScheme = lightColorScheme(
     onError = AppColors.TextWhite
 )
 
-private val DarkColorScheme = CustomColorScheme
+private val DarkColorScheme = darkColorScheme(
+    primary = AppColors.Primary,
+    onPrimary = AppColors.TextWhite,
+    primaryContainer = Color(0xFF003737), // Darker teal
+    onPrimaryContainer = Color(0xFFB2EEEE),
+    secondary = AppColors.Secondary,
+    onSecondary = AppColors.TextWhite,
+    background = Color(0xFF121212),
+    onBackground = Color(0xFFE1E1E1),
+    surface = Color(0xFF1E1E1E),
+    onSurface = Color(0xFFE1E1E1),
+    surfaceVariant = Color(0xFF2C2C2C),
+    onSurfaceVariant = Color(0xFFBDBDBD),
+    outline = Color(0xFF383838),
+    error = AppColors.Error,
+    onError = Color.White
+)
+
 private val LightColorScheme = CustomColorScheme
 @Composable
 fun PeerLearnTheme(

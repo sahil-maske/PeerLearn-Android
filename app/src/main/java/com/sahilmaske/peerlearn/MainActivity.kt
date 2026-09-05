@@ -1,10 +1,15 @@
 package com.sahilmaske.peerlearn
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,7 +17,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
+import com.sahilmaske.peerlearn.ui.DarkMode.AppearancePreferences
+import com.sahilmaske.peerlearn.ui.DarkMode.ThemeMode
 import com.sahilmaske.peerlearn.ui.Profile.ProfileSetupScreen
+import com.sahilmaske.peerlearn.ui.Profile.EditProfileScreen
+import com.sahilmaske.peerlearn.ui.services.FCMService
+import com.sahilmaske.peerlearn.ui.components.WebViewScreen
 import com.sahilmaske.peerlearn.ui.Settings.AccountScreen
 import com.sahilmaske.peerlearn.ui.Settings.BlockUsersScreen
 import com.sahilmaske.peerlearn.ui.Settings.ChangePasswordScreen
@@ -22,7 +32,10 @@ import com.sahilmaske.peerlearn.ui.Settings.PresenceManager
 import com.sahilmaske.peerlearn.ui.Settings.PrivacyScreen
 import com.sahilmaske.peerlearn.ui.Settings.ProfileInfo
 import com.sahilmaske.peerlearn.ui.Settings.ProfileVisibilityScreen
+import com.sahilmaske.peerlearn.ui.Settings.ReportProblemScreen
+import com.sahilmaske.peerlearn.ui.Settings.ReportUserScreen
 import com.sahilmaske.peerlearn.ui.Settings.SettingsScreen
+import com.sahilmaske.peerlearn.ui.Settings.SupportScreen
 import com.sahilmaske.peerlearn.ui.Settings.VerifyEmailScreen
 import com.sahilmaske.peerlearn.ui.auth.LoginScreen
 import com.sahilmaske.peerlearn.ui.auth.RegisterScreen
@@ -39,12 +52,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // NEW: poori app ke process lifecycle ke saath PresenceManager register kiya
-        // Isse pehle ye kabhi call hi nahi ho raha tha, isiliye online/offline update nahi ho raha tha
+        // poori app ke process lifecycle ke saath PresenceManager register kiya
         ProcessLifecycleOwner.get().lifecycle.addObserver(PresenceManager())
 
+        // Fetch and update FCM token if user is already logged in
+        if (FirebaseAuth.getInstance().currentUser != null) {
+            FCMService.updateCurrentToken()
+        }
+
         setContent {
-            PeerLearnTheme {
+            val prefs = remember { AppearancePreferences(this) }
+            val themeMode by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            
+            val useDarkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            PeerLearnTheme(darkTheme = useDarkTheme) {
                 PeerLearnApp()
             }
         }
@@ -114,7 +140,13 @@ fun PeerLearnApp() {
                     navController.navigate("chat_conversation/$chatId")
                 },
                 onBack = { navController.popBackStack() },
-                onSettingsClick = { navController.navigate("settings") }
+                onSettingsClick = { navController.navigate("settings") },
+                onEditProfileClick = { navController.navigate("edit_profile") }
+            )
+        }
+        composable("edit_profile") {
+            EditProfileScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         // NOTE: route ek hi baar define hai (pehle duplicate tha, hata diya)
@@ -138,7 +170,10 @@ fun PeerLearnApp() {
             val postId = backStackEntry.arguments?.getString("postId") ?: ""
             HelpDetailScreen(
                 postId = postId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToProfile = { userId ->
+                    navController.navigate("profile/$userId")
+                }
             )
         }
 
@@ -147,12 +182,51 @@ fun PeerLearnApp() {
                 onBack = { navController.popBackStack() },
                 onAccountClick = { navController.navigate("account") },
                 onPrivacyClick = { navController.navigate("privacy") },
+                onSupportClick = { navController.navigate("support") },
+                onToSClick = {
+                    val encodedUrl = Uri.encode("https://sahil-maske.github.io/PeerLearn-legal/terms.html")
+                    navController.navigate("webview?url=$encodedUrl&title=Terms of Service")
+                },
+                onPrivacyPolicyClick = {
+                    val encodedUrl = Uri.encode("https://sahil-maske.github.io/PeerLearn-legal/privacy.html")
+                    navController.navigate("webview?url=$encodedUrl&title=Privacy Policy")
+                },
                 onLogoutClick = {
                     FirebaseAuth.getInstance().signOut()
                     navController.navigate("login") {
                         popUpTo("main_nav") { inclusive = true }
                     }
+                },
+                onDeleteSuccess = {
+                    navController.navigate("login") {
+                        popUpTo("main_nav") { inclusive = true }
+                    }
                 }
+            )
+        }
+        composable("support") {
+            SupportScreen(
+                onBack = { navController.popBackStack() },
+                onReportProblemClick = { navController.navigate("report_problem") },
+                onReportUserClick = { navController.navigate("report_user") },
+                onToSClick = {
+                    val encodedUrl = Uri.encode("https://sahil-maske.github.io/PeerLearn-legal/terms.html")
+                    navController.navigate("webview?url=$encodedUrl&title=Terms of Service")
+                },
+                onPrivacyClick = {
+                    val encodedUrl = Uri.encode("https://sahil-maske.github.io/PeerLearn-legal/privacy.html")
+                    navController.navigate("webview?url=$encodedUrl&title=Privacy Policy")
+                }
+            )
+        }
+        composable("report_problem") {
+            ReportProblemScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("report_user") {
+            ReportUserScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         composable("account") {
@@ -211,6 +285,22 @@ fun PeerLearnApp() {
         composable("profile_info"){
             ProfileInfo(
                 onBack = { navController.popBackStack()}
+            )
+        }
+
+        composable(
+            route = "webview?url={url}&title={title}",
+            arguments = listOf(
+                navArgument("url") { type = NavType.StringType },
+                navArgument("title") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val url = backStackEntry.arguments?.getString("url") ?: ""
+            val title = backStackEntry.arguments?.getString("title") ?: ""
+            WebViewScreen(
+                url = url,
+                title = title,
+                onBack = { navController.popBackStack() }
             )
         }
 

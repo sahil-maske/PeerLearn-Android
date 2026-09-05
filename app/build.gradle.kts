@@ -12,7 +12,7 @@ android {
     defaultConfig {
         applicationId = "com.sahilmaske.peerlearn"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -37,12 +37,12 @@ android {
 
 dependencies {
 
-    // Firebase BOM - sirf EK baar, sabse pehle
+    // Firebase BOM
     implementation(platform(libs.firebase.bom))
 
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
 
-    // Firebase libraries - version number nahi likhna, BOM handle karega
+    // Firebase libraries
     implementation("com.google.firebase:firebase-messaging")
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
@@ -59,19 +59,17 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
 
-    // Baaki dependencies
-    implementation("com.google.android.gms:play-services-base:18.10.0")
+    // Other dependencies
+    implementation("com.google.android.gms:play-services-base")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.googleid)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
