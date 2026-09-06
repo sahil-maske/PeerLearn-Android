@@ -1,5 +1,6 @@
 package com.sahilmaske.peerlearn.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
@@ -68,18 +69,28 @@ class HelpDetailViewModel : ViewModel() {
     }
 
     private fun fetchAuthorProfiles(comments: List<Comment>) {
-        val uniqueAuthorIds = comments.map { it.authorId }.distinct()
-        val currentAuthors = _commentAuthors.value.toMutableMap()
-        
-        uniqueAuthorIds.forEach { authorId ->
-            if (!currentAuthors.containsKey(authorId)) {
-                db.collection("users").document(authorId).get()
-                    .addOnSuccessListener { doc ->
-                        doc.toObject(User::class.java)?.let { user ->
-                            _commentAuthors.value = _commentAuthors.value + (authorId to user)
-                        }
+        val authorIds = comments.map { it.authorId }.filter { it.isNotEmpty() }.distinct()
+        val currentAuthors = _commentAuthors.value
+        val missingIds = authorIds.filter { !currentAuthors.containsKey(it) }
+
+        if (missingIds.isEmpty()) return
+
+        // Batch fetch missing profiles (Firestore limit for 'whereIn' is 30)
+        missingIds.chunked(30).forEach { ids ->
+            db.collection("users")
+                .whereIn("uid", ids)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    val newAuthors = snapshot.documents.mapNotNull { it.toObject(User::class.java) }
+                    val updatedMap = _commentAuthors.value.toMutableMap()
+                    newAuthors.forEach { user ->
+                        updatedMap[user.uid] = user
                     }
-            }
+                    _commentAuthors.value = updatedMap
+                }
+                .addOnFailureListener { e ->
+                    Log.e("HelpDetailVM", "Error fetching author profiles", e)
+                }
         }
     }
 

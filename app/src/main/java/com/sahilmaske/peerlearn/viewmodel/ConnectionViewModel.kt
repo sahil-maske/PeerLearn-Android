@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import com.sahilmaske.peerlearn.data.model.Connection
 import com.sahilmaske.peerlearn.data.model.SwapRequest
 import com.sahilmaske.peerlearn.data.model.User
@@ -158,7 +159,8 @@ class ConnectionViewModel : ViewModel() {
     // - agar conversation doc pehli baar ban raha hai, to naya document banata hai
     // - senderId (requestedBy) ki taraf se icebreaker message bhejta hai
     private fun createConversationWithIcebreaker(userA: String, userB: String, senderId: String, skill: String) {
-        val chatId = listOf(userA, userB).sorted().joinToString("_")
+        val participants = listOf(userA, userB).sorted()
+        val chatId = participants.joinToString("_")
         val convoRef = db.collection("conversations").document(chatId)
 
         convoRef.get()
@@ -169,21 +171,24 @@ class ConnectionViewModel : ViewModel() {
                 }
 
                 val icebreaker = if (skill.isNotBlank()) {
-                    "Hey, I saw your profile — I see you know $skill. Can you help me grow in this skill?"
+                    "Hey, I saw your profile, I see you know $skill, can you help me grow in this skill?"
                 } else {
                     "Hey, I saw your profile and would love to connect and learn together!"
                 }
 
+                val otherId = if (senderId == userA) userB else userA
+
                 convoRef.set(
-                    hashMapOf(
-                        "participants" to listOf(userA, userB),
+                    mapOf(
+                        "participants" to participants,
                         "lastMessage" to icebreaker,
-                        "timestamp" to System.currentTimeMillis(),
+                        "timestamp" to FieldValue.serverTimestamp(),
                         "unreadCounts" to mapOf(
-                            (if (senderId == userA) userB else userA) to 1L,
+                            otherId to 1L,
                             senderId to 0L
                         )
-                    )
+                    ),
+                    SetOptions.merge()
                 ).addOnSuccessListener {
                     convoRef.collection("messages").add(
                         hashMapOf(

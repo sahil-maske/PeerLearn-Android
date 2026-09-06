@@ -17,6 +17,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,9 +53,13 @@ import com.sahilmaske.peerlearn.ui.home.PostScreen
 import com.sahilmaske.peerlearn.ui.chat.ChatScreen
 import com.sahilmaske.peerlearn.ui.profile.ProfileScreen
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.viewmodel.ChatViewModel
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
+import kotlinx.coroutines.delay
 
 @Composable
 fun NaviScreen(
@@ -62,7 +68,8 @@ fun NaviScreen(
     profileViewModel: ProfileViewModel = viewModel(),
     feedViewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
-    )
+    ),
+    chatViewModel: ChatViewModel = viewModel()
 ) {
     var selectedItem by remember(initialTab) { mutableIntStateOf(initialTab) }
     // NEW: added "Alerts" tab (index 3) so NotificationScreen is actually reachable.
@@ -76,6 +83,7 @@ fun NaviScreen(
     )
 
     val userProfile by profileViewModel.userProfile.collectAsState()
+    val totalUnreadCount by chatViewModel.totalUnreadCount.collectAsState()
 
     val isPreview = LocalInspectionMode.current
     val currentUserId = remember {
@@ -138,11 +146,17 @@ fun NaviScreen(
             transitionSpec = {
                 val direction = if (targetState > initialState) 1 else -1
                 (slideInHorizontally(
-                    animationSpec = tween(280),
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
                     initialOffsetX = { fullWidth -> direction * fullWidth / 4 }
                 ) + fadeIn(animationSpec = tween(280))) togetherWith
                         (slideOutHorizontally(
-                            animationSpec = tween(280),
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
                             targetOffsetX = { fullWidth -> -direction * fullWidth / 4 }
                         ) + fadeOut(animationSpec = tween(220)))
             },
@@ -181,7 +195,8 @@ fun NaviScreen(
                 items = items,
                 icons = icons,
                 selectedItem = selectedItem,
-                onItemSelected = { selectedItem = it }
+                onItemSelected = { selectedItem = it },
+                unreadCount = totalUnreadCount
             )
         }
     }
@@ -192,8 +207,11 @@ fun AnimatedBottomNav(
     items: List<String>,
     icons: List<ImageVector>,
     selectedItem: Int,
+    unreadCount: Int = 0,
     onItemSelected: (Int) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -236,6 +254,20 @@ fun AnimatedBottomNav(
                     ),
                     label = "tabWeight"
                 )
+
+                // However, the prompt specifically asked for a scale-down-then-up "press" feel.
+                // Since we don't have a direct 'isPressed' state without more complex logic here,
+                // we'll use a side effect of the selection to trigger a momentary scale dip.
+                var isPressed by remember { mutableStateOf(false) }
+                val animatedScale by animateFloatAsState(
+                    targetValue = if (isPressed) 0.85f else 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "animatedScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .weight(tabWeight)
@@ -248,19 +280,56 @@ fun AnimatedBottomNav(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { onItemSelected(index) },
+                        ) {
+                            if (!selected) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                // Trigger quick scale animation
+                                coroutineScope.launch {
+                                    isPressed = true
+                                    delay(80)
+                                    isPressed = false
+                                }
+                                onItemSelected(index)
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = animatedScale
+                            scaleY = animatedScale
+                        }
                     ) {
-                        Icon(
-                            imageVector = icons[index],
-                            contentDescription = item,
-                            tint = animatedTint,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = icons[index],
+                                contentDescription = item,
+                                tint = animatedTint,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            // NEW: unread message badge on Chat icon (index 2)
+                            if (index == 2 && unreadCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .offset(x = 4.dp, y = (-4).dp)
+                                        .size(if (unreadCount > 9) 17.dp else 16.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.Error)
+                                        .border(1.2.dp, Color.White, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                                        color = Color.White,
+                                        fontSize = if (unreadCount > 9) 8.sp else 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
                         if (selected) {
                             Spacer(Modifier.width(6.dp))
                             Text(
@@ -293,12 +362,12 @@ fun AnimatedBottomNavPreview() {
             items = listOf("Home", "Post", "Chat","Profile"),
             icons = listOf(
                 Icons.Default.Home,
-                Icons.Rounded.AddCircle,
+                Icons.Default.PostAdd,
                 Icons.AutoMirrored.Filled.Chat,
-                Icons.Default.Notifications,
                 Icons.Default.Person
             ),
             selectedItem = selected,
+            unreadCount = 12,
             onItemSelected = { selected = it }
         )
     }

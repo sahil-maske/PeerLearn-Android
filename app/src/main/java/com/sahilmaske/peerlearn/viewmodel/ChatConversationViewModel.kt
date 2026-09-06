@@ -27,7 +27,8 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
 ) {
 
     private val db = Firebase.firestore
-    val currentUid: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    private val auth = FirebaseAuth.getInstance()
+    private val currentUid: String get() = auth.currentUser?.uid ?: ""
 
     private val _peerInfo = MutableStateFlow(PeerInfo())
     val peerInfo: StateFlow<PeerInfo> = _peerInfo
@@ -38,6 +39,7 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
     private val _otherUserPresence = MutableStateFlow<User?>(null)
     val otherUserPresence: StateFlow<User?> = _otherUserPresence
 
+    private var messagesListener: ListenerRegistration? = null
     private var presenceListener: ListenerRegistration? = null
 
     init {
@@ -47,6 +49,7 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
     }
 
     private fun loadConversationAndPeer() {
+        val uid = currentUid
         viewModelScope.launch {
             try {
                 val convoDoc = db.collection("conversations").document(chatId).get().await()
@@ -55,12 +58,26 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
                 val skillContext = convoDoc.getString("skillContext") ?: ""
 
                 val otherUid = if (existingParticipants != null) {
-                    existingParticipants.firstOrNull { it != currentUid } as? String
+                    existingParticipants.firstOrNull { it != uid } as? String
                 } else {
-                    chatId.split("_").firstOrNull { it != currentUid }
+                    chatId.split("_").firstOrNull { it != uid }
                 }
 
-                if (otherUid.isNullOrBlank()) return@launch
+                if (otherUid.isNullOrBlank() || otherUid == uid) {
+                    // Fallback parse logic if uid was empty during parse
+                    val resolvedOther = chatId.split("_").firstOrNull { it != uid }
+                    if (resolvedOther.isNullOrBlank()) return@launch
+                    
+                    val userDoc = db.collection("users").document(resolvedOther).get().await()
+                    _peerInfo.value = PeerInfo(
+                        uid = resolvedOther,
+                        name = userDoc.getString("name") ?: "Unknown",
+                        avatarUrl = userDoc.getString("avatarUrl") ?: "",
+                        skillContext = skillContext
+                    )
+                    listenToPeerPresence(resolvedOther)
+                    return@launch
+                }
 
                 val userDoc = db.collection("users").document(otherUid).get().await()
                 _peerInfo.value = PeerInfo(
@@ -86,7 +103,8 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
     }
 
     private fun listenToMessages() {
-        db.collection("conversations").document(chatId)
+        messagesListener?.remove()
+        messagesListener = db.collection("conversations").document(chatId)
             .collection("messages")
             .orderBy("timestamp")
             .addSnapshotListener { snapshot, error ->
@@ -96,28 +114,32 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
     }
 
     fun sendMessage(text: String) {
-        if (text.isBlank() || currentUid.isBlank()) return
+        val uid = currentUid
+        if (text.isBlank() || uid.isBlank()) return
 
         val peerUid = _peerInfo.value.uid
-        if (peerUid.isBlank()) return
+        if (peerUid.isBlank() || peerUid == uid) return
 
+        val timestampValue = System.currentTimeMillis()
+        
         val message = hashMapOf(
-            "senderId" to currentUid,
+            "senderId" to uid,
             "text" to text,
-            "timestamp" to System.currentTimeMillis()
+            "timestamp" to timestampValue
         )
         val convoRef = db.collection("conversations").document(chatId)
         convoRef.collection("messages").add(message)
 
-        // NEW: peer ka unread count +1 badhao, apna 0 pe rakho (kyunki hum khud dekh rahe hain)
+        // NEW: use FieldValue.serverTimestamp() for the main doc to ensure perfect 
+        // global sorting for both users. unread counts are also updated in the same call.
         convoRef.set(
             mapOf(
-                "participants" to listOf(currentUid, peerUid),
+                "participants" to listOf(uid, peerUid).sorted(), // Ensure deterministic order
                 "lastMessage" to text,
-                "timestamp" to System.currentTimeMillis(),
+                "timestamp" to FieldValue.serverTimestamp(),
                 "unreadCounts" to mapOf(
                     peerUid to FieldValue.increment(1),
-                    currentUid to 0L
+                    uid to 0L
                 )
             ),
             SetOptions.merge()
@@ -126,9 +148,10 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
 
     // NEW: is chat ko khola matlab maine padh liya — apna unread count 0 kar do
     private fun markAsRead() {
-        if (currentUid.isBlank()) return
+        val uid = currentUid
+        if (uid.isBlank()) return
         db.collection("conversations").document(chatId)
-            .update("unreadCounts.$currentUid", 0L)
+            .update("unreadCounts.$uid", 0L)
             .addOnFailureListener {
                 // document abhi tak bana hi nahi (pehla message kabhi bheja hi nahi) — ignore kar sakte hain
             }
@@ -136,6 +159,7 @@ class ChatConversationViewModel(private val chatId: String) : ViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        messagesListener?.remove()
         presenceListener?.remove()
     }
 }

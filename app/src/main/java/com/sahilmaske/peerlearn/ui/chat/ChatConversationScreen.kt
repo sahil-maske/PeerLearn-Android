@@ -1,10 +1,24 @@
 package com.sahilmaske.peerlearn.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +34,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -32,6 +48,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.ui.platform.LocalConfiguration
 import com.sahilmaske.peerlearn.data.model.Message
 import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
@@ -40,6 +57,12 @@ import com.sahilmaske.peerlearn.viewmodel.PeerInfo
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+
+// ---------- iOS-style hardcoded colors for chat bubbles ----------
+private val MyBubbleColor = Color(0xFF0B93F6)       // iOS iMessage blue
+private val TheirBubbleColor = Color(0xFF0B93F6)    // near-black (dark gray) for received messages
+private val MyBubbleTextColor = Color.White
+private val TheirBubbleTextColor = Color.White
 
 @Composable
 fun ChatConversationScreen(
@@ -82,6 +105,7 @@ fun ChatConversationScreen(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatConversationContent(
     peerInfo: PeerInfo,
@@ -94,6 +118,7 @@ fun ChatConversationContent(
 ) {
     val listState = rememberLazyListState()
 
+    // Smooth scroll to bottom when new messages arrive OR when keyboard opens
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -123,8 +148,19 @@ fun ChatConversationContent(
                 .padding(horizontal = 12.dp),
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
-            items(messages) { message ->
+            itemsIndexed(
+                items = messages,
+                key = { index, message -> "${message.timestamp}_$index" }
+            ) { _, message ->
                 MessageBubble(
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = tween(300),
+                        placementSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        fadeOutSpec = tween(300)
+                    ),
                     text = message.text,
                     isMe = message.senderId == currentUserId,
                     timestamp = message.timestamp
@@ -208,85 +244,171 @@ fun ChatTopBar(
     }
 }
 
-// ---------- Message Bubble (iMessage style) ----------
+// ---------- Message Bubble (iOS iMessage style, hardcoded colors + shape) ----------
 @Composable
-fun MessageBubble(text: String, isMe: Boolean, timestamp: Long) {
+fun MessageBubble(
+    modifier: Modifier = Modifier,
+    text: String,
+    isMe: Boolean,
+    timestamp: Long
+) {
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { isVisible = true }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.9f,
+        animationSpec = tween(durationMillis = 200),
+        label = "bubbleScale"
+    )
+
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val maxBubbleWidth = screenWidth * 0.75f
+
+    // iOS-style asymmetric corners: the "tail" corner is less rounded than the other three
+    val bubbleShape = if (isMe) {
+        RoundedCornerShape(
+            topStart = 18.dp,
+            topEnd = 18.dp,
+            bottomStart = 18.dp,
+            bottomEnd = 4.dp
+        )
+    } else {
+        RoundedCornerShape(
+            topStart = 18.dp,
+            topEnd = 18.dp,
+            bottomStart = 4.dp,
+            bottomEnd = 18.dp
+        )
+    }
+
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp),
         horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
     ) {
-        Box(
-            modifier = Modifier
-                .background(
-                    color = if (isMe) AppColors.Primary else AppColors.Surface,
-                    shape = RoundedCornerShape(18.dp)
-                )
-                .widthIn(max = 280.dp)
-                .padding(horizontal = 14.dp, vertical = 9.dp)
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = fadeIn(tween(200)) + slideInVertically(initialOffsetY = { it / 2 }),
+            modifier = Modifier.scale(scale)
         ) {
-            Text(
-                text = text,
-                color = if (isMe) AppColors.TextWhite else AppColors.TextPrimary,
-                fontSize = 15.sp
-            )
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = if (isMe) MyBubbleColor else TheirBubbleColor, // hardcoded, theme-independent
+                        shape = bubbleShape
+                    )
+                    .widthIn(max = maxBubbleWidth)
+                    .padding(horizontal = 14.dp, vertical = 9.dp)
+            ) {
+                Text(
+                    text = text,
+                    color = if (isMe) MyBubbleTextColor else TheirBubbleTextColor, // always white on both
+                    fontSize = 15.sp
+                )
+            }
         }
     }
 }
 
-// ---------- Input Bar (iOS style) ----------
+// ---------- Input Bar (hardcoded light style, always — does not follow app theme) ----------
 @Composable
 fun MessageInputBar(onSendMessage: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val borderColor by animateColorAsState(
+        targetValue = if (isFocused) Color(0xFF0F6E6E) else Color(0xFFE0E0E0),
+        animationSpec = tween(200),
+        label = "borderColor"
+    )
+
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isFocused) 4.dp else 1.dp,
+        animationSpec = tween(200),
+        label = "shadowElevation"
+    )
+
+    val sendButtonScale by animateFloatAsState(
+        targetValue = if (text.isNotBlank()) 1.1f else 1f,
+        animationSpec = tween(200),
+        label = "sendButtonScale"
+    )
+
+    Surface(
+        color = Color(0xFFFFFFFF), // hardcoded white — always, regardless of app theme
+        tonalElevation = 0.dp,
+        shadowElevation = 8.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 44.dp),
-            placeholder = { Text("Message", color = AppColors.TextSecondary) },
-            shape = RoundedCornerShape(22.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF534AB7), // tera purple theme color
-                unfocusedBorderColor = Color.Gray
-            ),
-            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onDone = {
-                if (text.isNotBlank()) {
-                    onSendMessage(text.trim())
-                    text = ""
-                }
-            }),
-            maxLines = 4
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(if (text.isNotBlank()) AppColors.Primary else AppColors.Divider)
-                .clickable(enabled = text.isNotBlank()) {
-                    onSendMessage(text.trim())
-                    text = ""
-                },
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .navigationBarsPadding(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send",
-                tint = AppColors.TextWhite,
-                modifier = Modifier.size(18.dp)
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 44.dp)
+                    .shadow(shadowElevation, RoundedCornerShape(percent = 50))
+                    .border(1.dp, borderColor, RoundedCornerShape(percent = 50)),
+                placeholder = {
+                    Text(
+                        "Message",
+                        color = Color(0xFF9E9E9E), // hardcoded medium gray placeholder
+                        fontSize = 15.sp
+                    )
+                },
+                shape = RoundedCornerShape(percent = 50),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = Color(0xFFF5F5F5), // hardcoded light gray fill
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedTextColor = Color(0xFF1A1A1A), // hardcoded near-black text
+                    unfocusedTextColor = Color(0xFF1A1A1A),
+                    cursorColor = Color(0xFF0F6E6E)
+                ),
+                interactionSource = interactionSource,
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (text.isNotBlank()) {
+                        onSendMessage(text.trim())
+                        text = ""
+                    }
+                }),
+                maxLines = 4
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .scale(sendButtonScale)
+                    .clip(CircleShape)
+                    .background(
+                        if (text.isNotBlank()) Color(0xFF0F6E6E) // teal when active
+                        else Color(0xFFE0E0E0) // light gray when empty
+                    )
+                    .clickable(enabled = text.isNotBlank()) {
+                        onSendMessage(text.trim())
+                        text = ""
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = if (text.isNotBlank()) Color.White else Color(0xFF9E9E9E),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }
@@ -318,12 +440,13 @@ private fun presenceStatusText(presence: User?): String {
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 fun ChatConversationScreenPreview() {
+    val currentTime = System.currentTimeMillis()
     ChatConversationContent(
         peerInfo = PeerInfo(name = "Sarah Jenkins", avatarUrl = ""),
         presence = User(isOnline = true), // NEW: preview ke liye dummy presence
         messages = listOf(
-            Message(senderId = "other", text = "Hi! I saw your request for a swap 😊", timestamp = System.currentTimeMillis()),
-            Message(senderId = "me", text = "That's awesome! I'd love that.", timestamp = System.currentTimeMillis())
+            Message(senderId = "other", text = "Hi! I saw your request for a swap 😊", timestamp = currentTime),
+            Message(senderId = "me", text = "That's awesome! I'd love that.", timestamp = currentTime + 100)
         ),
         currentUserId = "me",
         onBack = {},

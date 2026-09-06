@@ -1,14 +1,22 @@
 package com.sahilmaske.peerlearn.ui.help
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -18,9 +26,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -251,22 +262,37 @@ fun HelpOfferRow(
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Circular profile picture
-                AsyncImage(
-                    model = authorProfile?.avatarUrl ?: comment.authorAvatarUrl,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.SecondaryContainer),
-                    contentScale = ContentScale.Crop
-                )
+                // Circular profile picture with fallback to initial/icon
+                if (authorProfile?.avatarUrl.isNullOrEmpty() && comment.authorAvatarUrl.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.SecondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val initial = (authorProfile?.name?.takeIf { it.isNotBlank() } 
+                            ?: comment.authorName).firstOrNull()?.uppercase() ?: "?"
+                        Text(initial, fontWeight = FontWeight.Bold, color = AppColors.Primary)
+                    }
+                } else {
+                    AsyncImage(
+                        model = authorProfile?.avatarUrl ?: comment.authorAvatarUrl,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.SecondaryContainer),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 
                 Spacer(Modifier.width(12.dp))
                 
                 Column(Modifier.weight(1f)) {
-                    // Proper name from User doc, fall back to captured name (if not email prefix)
-                    val displayName = authorProfile?.name?.takeIf { it.isNotBlank() } ?: comment.authorName
+                    // Use real name from User document as priority
+                    val displayName = authorProfile?.name?.takeIf { it.isNotBlank() } 
+                        ?: comment.authorName.substringBefore("@")
                     
                     Text(
                         text = displayName,
@@ -322,37 +348,97 @@ fun HelpOfferRow(
 @Composable
 fun CommentInputField(onSend: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val borderColor by animateColorAsState(
+        targetValue = if (isFocused) Color(0xFF11998E) else Color.Transparent,
+        animationSpec = tween(200),
+        label = "borderColor"
+    )
+
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isFocused) 4.dp else 1.dp,
+        animationSpec = tween(200),
+        label = "shadowElevation"
+    )
+
+    val sendButtonScale by animateFloatAsState(
+        targetValue = if (text.isNotBlank()) 1.1f else 1f,
+        animationSpec = tween(200),
+        label = "sendButtonScale"
+    )
+
     Surface(
-        modifier = Modifier.fillMaxWidth().imePadding(),
-        color = AppColors.Surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp,
         shadowElevation = 8.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).navigationBarsPadding(),
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .navigationBarsPadding(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                placeholder = { Text("Offer help or comment...", fontSize = 14.sp) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
+                placeholder = { 
+                    Text(
+                        "Offer help or comment...", 
+                        fontSize = 14.sp, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    ) 
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .shadow(shadowElevation, RoundedCornerShape(percent = 50))
+                    .border(1.dp, borderColor, RoundedCornerShape(percent = 50)),
+                shape = RoundedCornerShape(percent = 50),
                 maxLines = 3,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppColors.Primary,
-                    unfocusedBorderColor = AppColors.Border
-                )
-            )
-            Spacer(Modifier.width(8.dp))
-            IconButton(
-                onClick = {
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = Color(0xFF11998E)
+                ),
+                interactionSource = interactionSource,
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onDone = {
                     if (text.isNotBlank()) {
-                        onSend(text)
+                        onSend(text.trim())
                         text = ""
                     }
-                }
+                })
+            )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .scale(sendButtonScale)
+                    .clip(CircleShape)
+                    .background(
+                        if (text.isNotBlank()) Color(0xFF11998E) 
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                    .clickable(enabled = text.isNotBlank()) {
+                        onSend(text.trim())
+                        text = ""
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = AppColors.Primary)
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = if (text.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
