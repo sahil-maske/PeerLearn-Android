@@ -1,122 +1,145 @@
-# PeerLearn 🎓
+# PeerLearn
 
-**Peer-to-Peer Student Learning Network** — An Android app that connects students to learn from each other, powered by AI-driven skill matching.
-
-> Built as a solo project by a 2nd-year CSE Diploma student, demonstrating real-world Android development with modern architecture and AI integration.
+**PeerLearn** is a peer-to-peer skill-swap platform for Android where students and self-learners connect to teach and learn skills from one another. Post what you can teach, find people who can teach you what you want to learn, and connect directly — no middleman, no paid courses.
 
 ---
 
-## 🚩 The Problem
+## ✨ Features
 
-- Students struggle to find peers with complementary skills
-- Traditional tutoring is expensive and not peer-oriented
-- No dedicated platform exists for student-to-student skill exchange
+### Core Social Feed
+- Real-time community feed with **Teach / Learn / Help** post types
+- Image uploads via Cloudinary
+- Like, comment, and share on posts
+- Dedicated **"Need Help"** flow — post a question, others offer help directly
 
-## 💡 The Solution
+### Peer Matching
+- Rule-based skill matching engine — compares what you want to learn against what others can teach
+- Recommended Peers section on the home feed, ranked by match relevance
+- One-tap **Connect** requests with real-time pending/accepted state
 
-PeerLearn lets students list skills they **can teach** and skills they **want to learn**, then uses AI to intelligently match them with compatible peers — followed by real-time chat to connect and start learning.
+### Real-Time Chat
+- 1-to-1 conversations with deterministic chat IDs
+- Live online/last-seen presence indicators
+- Icebreaker message auto-sent when a connection is accepted
 
-- 🤖 **AI-powered skill matching** using Google's Gemini API
-- 💬 **Real-time chat** to connect matched peers
-- 👤 **Simple profile system** to showcase skills
+### Profile & Identity
+- Public vs. own-profile views
+- "Can Teach" / "Wants to Learn" skill tags
+- Linked accounts (Instagram, LinkedIn, GitHub, Twitter)
+- Email verification and phone number linking
+- Responsive layouts for tablets and foldables
+
+### Notifications & Requests
+- Dedicated notifications tab for incoming connection requests
+- Accept/reject flow with live status sync
+- Block/unblock users
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Language | Kotlin |
-| UI | Jetpack Compose |
-| Architecture | MVVM + Clean Architecture |
-| DI | Hilt |
-| Backend | Firebase (Auth, Firestore, FCM) |
-| AI | Google Gemini API |
-
----
-
-## 📱 Core Screens
-
-### Home Screen
-Discovery hub showing AI-curated peer suggestions based on the user's skill profile, with skill filter chips and a floating action button to post learning requests.
-
-### Profile Screen
-Displays and allows editing of user skills, bio, and availability — with fields for skills taught (`teaches`) and skills wanted (`wants`).
-
-### Chat Screen
-Real-time 1-to-1 messaging between matched peers using Firestore's live listeners.
-
----
-
-## 🧠 How AI Matching Works
-
-1. Fetch candidate peers from Firestore (rough filter on overlapping skills)
-2. Send user profile + candidate list to Gemini API
-3. Gemini ranks candidates by skill compatibility (0–100 score)
-4. Display ranked list on the Home Screen
-
-```kotlin
-val model = GenerativeModel(
-    modelName = "gemini-1.5-flash",
-    apiKey = BuildConfig.GEMINI_API_KEY
-)
-val response = model.generateContent(prompt)
-val ranked = parseMatchJson(response.text)
-```
-
----
-
-## 🎨 Design
-
-Login and onboarding use a **glassmorphism UI** — blurred translucent cards on a dark gradient background — for a premium first impression.
+| Layer            | Technology                                  |
+|-------------------|----------------------------------------------|
+| Language           | Kotlin                                       |
+| UI                 | Jetpack Compose, Material 3                  |
+| Architecture       | MVVM                                         |
+| Backend / Database | Firebase Firestore                           |
+| Auth               | Firebase Authentication                      |
+| Media Storage      | Cloudinary                                   |
+| Push Notifications | Firebase Cloud Messaging (FCM)               |
+| Async              | Kotlin Coroutines & Flow                     |
+| Image Loading      | Coil                                         |
 
 ---
 
 ## 🏗️ Architecture
 
+The app follows an **MVVM** pattern with a clear separation between UI, state, and data:
+
 ```
-app/
-├── data/
-│   ├── model/         # User, Message, ChatRoom data classes
-│   ├── repository/    # FirestoreRepository, AuthRepository
-│   └── remote/        # GeminiApiService
-├── ui/
-│   ├── home/          # HomeScreen + HomeViewModel
-│   ├── profile/       # ProfileScreen + ProfileViewModel
-│   ├── chat/          # ChatScreen + ChatViewModel
-│   └── auth/          # LoginScreen + AuthViewModel
-├── navigation/        # NavGraph.kt
-└── di/                # Hilt modules
+ui/          → Composable screens and reusable components
+viewmodel/   → ViewModels holding UI state via StateFlow
+data/model/  → Data classes (User, Post, Connection, PeerSuggestion, etc.)
+repository/  → Firestore/Cloudinary/matching logic, decoupled from UI
 ```
+
+Key patterns used throughout the app:
+- **StateFlow + `collectAsState()`** for reactive UI updates
+- **Deterministic document IDs** (sorted UID pairs) for chats and connections, so both users always resolve to the same document without an extra lookup
+- **Real-time Firestore listeners** (`addSnapshotListener`) for feed, chat, presence, and connection status
+- **Atomic Firestore operations** (`arrayUnion`/`arrayRemove`, `increment()`) for likes and counts, to stay race-condition safe under concurrent updates
 
 ---
 
-## 🗺️ Roadmap
+## 🎨 Design System
 
-- [x] **Phase 1 — Foundation:** Firebase setup, navigation, glassmorphism login
-- [ ] **Phase 2 — Core Features:** Profile editing, Firestore peer query, Gemini matching
-- [ ] **Phase 3 — Chat:** Real-time messaging, chat list, push notifications
-- [ ] **Phase 4 — Polish & Ship:** UI refinement, user seeding, public demo
+| Token            | Value       |
+|-------------------|-------------|
+| Primary (Teal)     | `#0F6E6E`  |
+| Secondary (Purple) | `#534AB7`  |
+| Accent (Amber)     | `#E8A33D`  |
+| Background         | `#FAF8F5`  |
 
 ---
 
 ## 🚀 Getting Started
 
-```bash
-git clone https://github.com/sahil-maske/PeerLearn-Android.git
-```
+### Prerequisites
+- Android Studio (latest stable)
+- A Firebase project with **Firestore**, **Authentication**, and **Cloud Messaging** enabled
+- A Cloudinary account for media storage
 
-1. Open in Android Studio
-2. Add your `google-services.json` (Firebase config)
-3. Add your Gemini API key to `local.properties`:
+### Setup
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/sahil-maske/PeerLearn.git
    ```
-   GEMINI_API_KEY=your_key_here
+
+2. Add your Firebase config
+   - Download `google-services.json` from your Firebase console
+   - Place it in the `app/` directory
+
+3. Add your API keys
+   - Open (or create) `local.properties` in the project root
+   - Add your Cloudinary and any other required keys:
+     ```
+     CLOUDINARY_CLOUD_NAME=your_cloud_name
+     CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+     ```
+
+4. Sync Gradle and run
+   ```bash
+   ./gradlew build
    ```
-4. Run on an emulator or device
+
+> **Note:** `google-services.json` and `local.properties` are gitignored and must be added locally — they are never committed to this repository.
+
+---
+
+## 📱 Screenshots
+
+*(Add screenshots here once available — Home feed, Chat, Profile, Peer Recommendations)*
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Semantic skill matching using embeddings (beyond exact keyword match)
+- [ ] Presence write-side manager (foreground/background online status)
+- [ ] In-app skill-swap scheduling
+- [ ] Ratings and reviews after a completed skill swap
 
 ---
 
 ## 👤 Author
 
-Built by **Sahil Maske** — 3nd Year CSE Diploma Student
-[GitHub](https://github.com/sahil-maske)
+**Sahil Maske**
+Diploma in Computer Science Engineering (MSBTE)
+[GitHub](https://github.com/sahil-maske) · sahilmaske.dev@gmail.com
+
+---
+
+## 📄 License
+
+This project is currently unlicensed / for portfolio and educational purposes. Add a license file if you intend to open-source it.
