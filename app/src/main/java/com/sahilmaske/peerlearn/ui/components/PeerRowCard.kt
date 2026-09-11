@@ -38,7 +38,8 @@ import com.sahilmaske.peerlearn.data.model.PeerSuggestion
 @Composable
 fun PeerRowCard(
     peer: PeerSuggestion,
-    navController: NavController
+    navController: NavController,
+    onConnectClick: (String) -> Unit = {}
 ) {
 
     Row(
@@ -48,7 +49,7 @@ fun PeerRowCard(
             .clip(RoundedCornerShape(18.dp))
             .background(Color(0xFFFFFFFF))
             .clickable {
-                navController.navigate("profile/${peer.uid}")   // ← poora card click karega, sirf avatar nahi
+                navController.navigate("profile/${peer.uid}")
             }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -134,7 +135,7 @@ fun PeerRowCard(
             }
             Spacer(Modifier.height(10.dp))
             OutlinedButton(
-                onClick = { /* connect logic */ },
+                onClick = { onConnectClick(peer.uid) },
                 modifier = Modifier.height(30.dp),
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6C63FF))

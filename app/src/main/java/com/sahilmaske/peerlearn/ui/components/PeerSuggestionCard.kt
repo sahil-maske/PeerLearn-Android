@@ -52,14 +52,16 @@ private val DashedBorderColor = Color(0xFF6C7BFF)
 @Composable
 fun PeerSuggestionCard(
     peer: PeerSuggestion,
-    onPeerClick: (String) -> Unit
+    onPeerClick: (String) -> Unit,
+    onConnectClick: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
             .padding(2.dp)
             .width(180.dp)
             .background(Color(0xFFFFFFFF), shape = RoundedCornerShape(16.dp))
-            .padding(14.dp),
+            .padding(14.dp)
+            .clickable { onPeerClick(peer.id) },
         horizontalAlignment = Alignment.Start
     ) {
         // ---- Avatar + name + institution ----
@@ -68,9 +70,6 @@ fun PeerSuggestionCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .clickable {
-                        onPeerClick(peer.uid)   // ← poora card click karega, sirf avatar nahi
-                    }
                     .background(Color(0xFFF0F0F5)),
                 contentAlignment = Alignment.Center
             ) {
@@ -102,8 +101,6 @@ fun PeerSuggestionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                // NOTE: PeerSuggestion needs an `institution` field for this —
-                // add it to the model + Firestore doc. Falls back to nothing if blank.
                 if (peer.institution.isNotBlank()) {
                     Text(
                         text = peer.institution,
@@ -152,10 +149,7 @@ fun PeerSuggestionCard(
 
         // ---- Connect button (teal fill + dashed outline) ----
         DashedConnectButton(
-            onClick = {
-                // Connection logic is handled by ProfileScreen via ConnectionViewModel
-                // This card is for browsing; clicking the avatar/name navigates to profile
-            }
+            onClick = { onConnectClick(peer.id) }
         )
     }
 }
@@ -239,6 +233,7 @@ fun PeerSuggestionCardPreview() {
             learnSkill = "Guitar",
             matchPercentage = 92
         ),
-        onPeerClick = {}
+        onPeerClick = {},
+        onConnectClick = {}
     )
 }

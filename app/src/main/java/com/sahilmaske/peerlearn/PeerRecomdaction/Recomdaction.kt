@@ -19,39 +19,77 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilmaske.peerlearn.data.model.SkillMatchModel
+import com.sahilmaske.peerlearn.data.model.User
+import com.sahilmaske.peerlearn.repository.SkillMatchRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class RecommendationViewModel : ViewModel() {
+class RecommendationViewModel(
+    private val repository: SkillMatchRepository = SkillMatchRepository()
+) : ViewModel() {
     private val _matches = MutableStateFlow<List<SkillMatchModel>>(emptyList())
     val matches: StateFlow<List<SkillMatchModel>> = _matches.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    fun loadMatches(currentUser: User) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                _matches.value = repository.getRuleBasedMatches(currentUser)
+            } catch (e: Exception) {
+                // Handle error if needed
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 }
 
 
 @Composable
 fun RecommendationScreen(
-    viewModel: RecommendationViewModel = viewModel()
+    viewModel: RecommendationViewModel = viewModel(),
+    currentUser: User
 ) {
     val matches by viewModel.matches.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    // Screen pehli baar dikhte hi ye ek baar chalega
+    LaunchedEffect(Unit) {
+        viewModel.loadMatches(currentUser)
+    }
+
+    RecommendationContent(
+        matches = matches,
+        isLoading = isLoading
+    )
+}
+
+@Composable
+fun RecommendationContent(
+    matches: List<SkillMatchModel>,
+    isLoading: Boolean
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             isLoading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
+
             matches.isEmpty() -> {
                 Text(
                     text = "No matches found yet",
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
+
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(16.dp)
@@ -88,6 +126,13 @@ fun MatchCard(match: SkillMatchModel) {
 @Composable
 fun RecommendationScreenPreview() {
     MaterialTheme {
-        RecommendationScreen()
+        RecommendationContent(
+            matches = listOf(
+                SkillMatchModel("1", "Sahil Maske", 0.95f, "Expert in Jetpack Compose"),
+                SkillMatchModel("2", "John Doe", 0.8f, "Strong backend skills"),
+                SkillMatchModel("3", "Jane Smith", 0.6f, "Interested in UI/UX")
+            ),
+            isLoading = false
+        )
     }
 }

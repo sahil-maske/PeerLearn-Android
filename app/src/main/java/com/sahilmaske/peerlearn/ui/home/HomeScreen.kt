@@ -60,6 +60,7 @@ import com.sahilmaske.peerlearn.ui.components.CommentsBottomSheet
 import com.sahilmaske.peerlearn.ui.components.PeerSuggestionCard
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.util.timeAgo
+import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
@@ -70,6 +71,7 @@ fun HomeScreen(
     viewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
     ),
+    connectionViewModel: ConnectionViewModel = viewModel(),
     currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 ) {
     val suggestions by viewModel.suggestions.collectAsState()
@@ -90,6 +92,12 @@ fun HomeScreen(
         onNotificationClick = {
             navController.navigate("notifications")
         },
+        onConnectClick = { uid ->
+            connectionViewModel.sendConnectionRequest(
+                currentUserId = currentUserId,
+                targetUserId = uid
+            )
+        },
         onHelpClick = { postId ->
             // NEW: opens the "Need Help" post's detail screen (comments = help offers)
             navController.navigate("help_detail/$postId")
@@ -107,6 +115,7 @@ fun HomeScreenContent(
     currentUserId: String,
     onSeeAllClick: () -> Unit,
     onPeerClick: (String) -> Unit,
+    onConnectClick: (String) -> Unit,
     onNotificationClick: () -> Unit,
     onHelpClick: (String) -> Unit = {},
     viewModel: FeedViewModel? = null
@@ -247,7 +256,8 @@ fun HomeScreenContent(
                     items(suggestions) { peer ->
                         PeerSuggestionCard(
                             peer = peer,
-                            onPeerClick = onPeerClick
+                            onPeerClick = onPeerClick,
+                            onConnectClick = onConnectClick
                         )
                     }
                 }
@@ -541,6 +551,7 @@ fun FeedScreenPreview() {
         currentUserId = "mock_user_id",
         onSeeAllClick = {},
         onPeerClick = {},
+        onConnectClick = {},
         onNotificationClick = {}
     )
 }

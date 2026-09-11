@@ -34,8 +34,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.sahilmaske.peerlearn.ui.components.PeerRowCard
+import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SeeAllPeersScreen(
@@ -43,7 +45,9 @@ fun SeeAllPeersScreen(
     profileViewModel: ProfileViewModel = viewModel(),
     viewModel: FeedViewModel = viewModel(
         factory = FeedViewModel.provideFactory(profileViewModel)
-    )
+    ),
+    connectionViewModel: ConnectionViewModel = viewModel(),
+    currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 ) {
     val allPeers by viewModel.allPeers.collectAsState()
 
@@ -85,7 +89,16 @@ fun SeeAllPeersScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(allPeers) { peer ->
-                PeerRowCard(peer = peer, navController = navController)
+                PeerRowCard(
+                    peer = peer,
+                    navController = navController,
+                    onConnectClick = { targetUid ->
+                        connectionViewModel.sendConnectionRequest(
+                            currentUserId = currentUserId,
+                            targetUserId = targetUid
+                        )
+                    }
+                )
             }
         }
     }
