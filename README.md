@@ -119,7 +119,11 @@ Key patterns used throughout the app:
 
 ## 📱 Screenshots
 
-*(Add screenshots here once available — Home feed, Chat, Profile, Peer Recommendations)*
+*UI mockups shown below — built with [Stitch](https://stitch.withgoogle.com), reflecting the app's actual design system and features.*
+
+| Home Feed | Chat | Profile | Create Post |
+|:---:|:---:|:---:|:---:|
+| ![Home Screen](screenshots/home_screen.png) | ![Chat Screen](screenshots/chat_screen.png) | ![Profile Screen](screenshots/profile_screen.png) | ![Post Screen](screenshots/post_screen.png) |
 
 ---
 
