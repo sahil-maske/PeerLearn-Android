@@ -192,11 +192,14 @@ class FeedViewModel(
         }
     }
 
+    // FIX: pehle "knownSkills" fetch kar raha tha — isse "mere jaisa knowledge" wale
+    // users match ho rahe the, jabki hume "jo mujhe sikha sake" wale chahiye.
+    // Ab current user ki "learningSkills" (wo kya seekhna chahta hai) fetch hoti hai.
     private suspend fun getMySkills(currentUserId: String): List<String> {
         android.util.Log.d("FeedDebug", "getMySkills called for $currentUserId")
         val myDoc = db.collection("users").document(currentUserId).get().await()
         android.util.Log.d("FeedDebug", "getMySkills: document exists = ${myDoc.exists()}")
-        val skills = myDoc.get("knownSkills") as? List<String> ?: emptyList()
+        val skills = myDoc.get("learningSkills") as? List<String> ?: emptyList()
         android.util.Log.d("FeedDebug", "getMySkills: returned $skills")
         return skills
     }
@@ -216,6 +219,7 @@ class FeedViewModel(
             val knownSkills = doc.get("knownSkills") as? List<String> ?: emptyList()
             val learningSkills = doc.get("learningSkills") as? List<String> ?: emptyList()
 
+            // mySkills (mera learningSkills) VS knownSkills (unka knownSkills) — ab sahi comparison
             val match = calculateMatchPercentage(mySkills, knownSkills)
 
             PeerSuggestion(
