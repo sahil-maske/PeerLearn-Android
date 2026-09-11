@@ -39,7 +39,8 @@ import com.sahilmaske.peerlearn.data.model.PeerSuggestion
 fun PeerRowCard(
     peer: PeerSuggestion,
     navController: NavController,
-    onConnectClick: (String) -> Unit = {}
+    onConnectClick: (String) -> Unit = {},
+    isPending: Boolean = false
 ) {
 
     Row(
@@ -135,13 +136,21 @@ fun PeerRowCard(
             }
             Spacer(Modifier.height(10.dp))
             OutlinedButton(
-                onClick = { onConnectClick(peer.uid) },
+                onClick = { if (!isPending) onConnectClick(peer.uid) },
                 modifier = Modifier.height(30.dp),
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6C63FF))
+                colors = if (isPending) {
+                    ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color(0xFFF0F0F0),
+                        contentColor = Color(0xFF9E9E9E)
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6C63FF))
+                },
+                enabled = !isPending
             ) {
                 Text(
-                    text = "Connect",
+                    text = if (isPending) "Pending" else "Connect",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                 )

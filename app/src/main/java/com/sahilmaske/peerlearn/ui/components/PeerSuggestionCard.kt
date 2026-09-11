@@ -53,7 +53,8 @@ private val DashedBorderColor = Color(0xFF6C7BFF)
 fun PeerSuggestionCard(
     peer: PeerSuggestion,
     onPeerClick: (String) -> Unit,
-    onConnectClick: (String) -> Unit
+    onConnectClick: (String) -> Unit,
+    isPending: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -149,7 +150,8 @@ fun PeerSuggestionCard(
 
         // ---- Connect button (teal fill + dashed outline) ----
         DashedConnectButton(
-            onClick = { onConnectClick(peer.id) }
+            isPending = isPending,
+            onClick = { if (!isPending) onConnectClick(peer.id) }
         )
     }
 }
@@ -166,25 +168,32 @@ private fun SkillChip(text: String, background: Color, textColor: Color) {
 }
 
 @Composable
-private fun DashedConnectButton(onClick: () -> Unit) {
+private fun DashedConnectButton(isPending: Boolean = false, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .background(TealPrimary, shape = RoundedCornerShape(50))
+            .background(if (isPending) Color(0xFF9E9E9E) else TealPrimary, shape = RoundedCornerShape(50))
             .dashedBorder(color = DashedBorderColor, strokeWidth = 1.5.dp, cornerRadius = 50.dp)
             .clickableNoRipple(onClick),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.PersonAdd,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(16.dp)
+            if (!isPending) {
+                Icon(
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+            }
+            Text(
+                text = if (isPending) "Pending" else "Connect",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
-            Spacer(Modifier.width(6.dp))
-            Text("Connect", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
     }
 }
@@ -234,6 +243,7 @@ fun PeerSuggestionCardPreview() {
             matchPercentage = 92
         ),
         onPeerClick = {},
-        onConnectClick = {}
+        onConnectClick = {},
+        isPending = false
     )
 }

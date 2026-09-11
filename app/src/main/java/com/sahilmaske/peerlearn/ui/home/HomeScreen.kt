@@ -74,6 +74,8 @@ fun HomeScreen(
     connectionViewModel: ConnectionViewModel = viewModel(),
     currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 ) {
+    var pendingConnections by remember { mutableStateOf(setOf<String>()) }
+
     val suggestions by viewModel.suggestions.collectAsState()
     val posts by viewModel.posts.collectAsState()
     val userProfile by profileViewModel.userProfile.collectAsState()
@@ -83,6 +85,7 @@ fun HomeScreen(
         suggestions = suggestions,
         posts = posts,
         currentUserId = currentUserId,
+        pendingConnections = pendingConnections,
         onSeeAllClick = {
             navController.navigate("see_all_peers")
         },
@@ -95,7 +98,10 @@ fun HomeScreen(
         onConnectClick = { uid ->
             connectionViewModel.sendConnectionRequest(
                 currentUserId = currentUserId,
-                targetUserId = uid
+                targetUserId = uid,
+                onSuccess = {
+                    pendingConnections = pendingConnections + uid
+                }
             )
         },
         onHelpClick = { postId ->
@@ -113,6 +119,7 @@ fun HomeScreenContent(
     suggestions: List<PeerSuggestion>,
     posts: List<Post>,
     currentUserId: String,
+    pendingConnections: Set<String> = emptySet(),
     onSeeAllClick: () -> Unit,
     onPeerClick: (String) -> Unit,
     onConnectClick: (String) -> Unit,
@@ -257,7 +264,8 @@ fun HomeScreenContent(
                         PeerSuggestionCard(
                             peer = peer,
                             onPeerClick = onPeerClick,
-                            onConnectClick = onConnectClick
+                            onConnectClick = onConnectClick,
+                            isPending = peer.id in pendingConnections
                         )
                     }
                 }
@@ -549,6 +557,7 @@ fun FeedScreenPreview() {
         suggestions = mockSuggestions,
         posts = mockPosts,
         currentUserId = "mock_user_id",
+        pendingConnections = emptySet(),
         onSeeAllClick = {},
         onPeerClick = {},
         onConnectClick = {},

@@ -23,6 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,6 +52,7 @@ fun SeeAllPeersScreen(
     connectionViewModel: ConnectionViewModel = viewModel(),
     currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 ) {
+    var pendingConnections by remember { mutableStateOf(setOf<String>()) }
     val allPeers by viewModel.allPeers.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -95,9 +99,13 @@ fun SeeAllPeersScreen(
                     onConnectClick = { targetUid ->
                         connectionViewModel.sendConnectionRequest(
                             currentUserId = currentUserId,
-                            targetUserId = targetUid
+                            targetUserId = targetUid,
+                            onSuccess = {
+                                pendingConnections = pendingConnections + targetUid
+                            }
                         )
-                    }
+                    },
+                    isPending = peer.uid in pendingConnections
                 )
             }
         }
