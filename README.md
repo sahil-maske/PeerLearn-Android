@@ -122,10 +122,10 @@ Key patterns used throughout the app:
 *UI mockups shown below — built with [Stitch](https://stitch.withgoogle.com), reflecting the app's actual design system and features.*
 
 <p align="center">
-  <img src="screenshots/home_screen.png" width="200" alt="Home Screen"/>
-  <img src="screenshots/chat_screen.png" width="200" alt="Chat Screen"/>
-  <img src="screenshots/profile_screen.png" width="200" alt="Profile Screen"/>
-  <img src="screenshots/post_screen.png" width="200" alt="Post Screen"/>
+  <img src="home_screen.png" width="200" alt="Home Screen"/>
+  <img src="chat_screen.png" width="200" alt="Chat Screen"/>
+  <img src="profile_screen.png" width="200" alt="Profile Screen"/>
+  <img src="post_screen.png" width="200" alt="Post Screen"/>
 </p>
 
 | Home Feed | Chat | Profile | Create Post |
