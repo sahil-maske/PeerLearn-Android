@@ -9,5 +9,6 @@ data class Conversation(
     val time: String,
     val isOnline: Boolean = false,
     val unreadCount: Int = 0,
-    val hasUnread: Boolean = false
+    val hasUnread: Boolean = false,
+    val timestampMillis: Long = 0L
 )

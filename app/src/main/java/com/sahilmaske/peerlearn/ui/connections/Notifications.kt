@@ -71,7 +71,12 @@ fun NotificationScreen(
                 userA = request.userA,
                 userB = request.userB,
                 requestedBy = request.requestedBy,
-                matchedSkill = request.matchedSkill
+                matchedSkill = request.matchedSkill,
+                onSuccess = { chatId ->
+                    if (chatId != null) {
+                        onNavigateToChat(chatId)
+                    }
+                }
             )
             onNavigateToChat(request.connectionId)
         },

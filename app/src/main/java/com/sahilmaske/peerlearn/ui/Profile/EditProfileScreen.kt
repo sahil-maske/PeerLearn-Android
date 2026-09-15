@@ -25,11 +25,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.EditProfileState
 import com.sahilmaske.peerlearn.viewmodel.EditProfileViewModel
@@ -46,32 +48,8 @@ fun EditProfileScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     val isUploading by viewModel.isUploading.collectAsState()
 
-    var name by remember { mutableStateOf("") }
-    var tagline by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
-    var about by remember { mutableStateOf("") }
-    var knownSkills by remember { mutableStateOf(listOf<String>()) }
-    var learningSkills by remember { mutableStateOf(listOf<String>()) }
-
-    var newKnownSkill by remember { mutableStateOf("") }
-    var newLearningSkill by remember { mutableStateOf("") }
-
-    var showImagePicker by remember { mutableStateOf(false) }
-    var pendingCameraImageUri by remember { mutableStateOf<Uri?>(null) }
-
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
-    }
-
-    LaunchedEffect(userProfile) {
-        userProfile?.let {
-            name = it.name
-            tagline = it.tagline
-            location = it.location
-            about = it.about
-            knownSkills = it.knownSkills
-            learningSkills = it.learningSkills
-        }
     }
 
     LaunchedEffect(uiState) {
@@ -84,13 +62,59 @@ fun EditProfileScreen(
         }
     }
 
+    EditProfileContent(
+        uiState = uiState,
+        userProfile = userProfile,
+        isUploading = isUploading,
+        onBack = onBack,
+        onSave = { name, tagline, location, about, known, learning ->
+            viewModel.saveProfile(name, tagline, location, about, known, learning)
+        },
+        onUploadPhoto = { uri ->
+            viewModel.uploadPhoto(context, uri)
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun EditProfileContent(
+    uiState: EditProfileState,
+    userProfile: User?,
+    isUploading: Boolean,
+    onBack: () -> Unit,
+    onSave: (String, String, String, String, List<String>, List<String>) -> Unit,
+    onUploadPhoto: (Uri) -> Unit
+) {
+    val context = LocalContext.current
+    var name by remember { mutableStateOf("") }
+    var tagline by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var about by remember { mutableStateOf("") }
+    var knownSkills by remember { mutableStateOf(listOf<String>()) }
+    var learningSkills by remember { mutableStateOf(listOf<String>()) }
+
+    var showImagePicker by remember { mutableStateOf(false) }
+    var pendingCameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(userProfile) {
+        userProfile?.let {
+            name = it.name
+            tagline = it.tagline
+            location = it.location
+            about = it.about
+            knownSkills = it.knownSkills
+            learningSkills = it.learningSkills
+        }
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { viewModel.uploadPhoto(context, it) }
+        uri?.let { onUploadPhoto(it) }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
-            pendingCameraImageUri?.let { viewModel.uploadPhoto(context, it) }
+            pendingCameraImageUri?.let { onUploadPhoto(it) }
         }
     }
 
@@ -109,7 +133,7 @@ fun EditProfileScreen(
                     } else {
                         IconButton(
                             onClick = {
-                                viewModel.saveProfile(name, tagline, location, about, knownSkills, learningSkills)
+                                onSave(name, tagline, location, about, knownSkills, learningSkills)
                             },
                             enabled = !isUploading
                         ) {
@@ -323,4 +347,24 @@ fun SkillInputSection(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun EditProfilePreview() {
+    val dummyUser = User(
+        name = "Sahil Maske",
+        tagline = "Android Developer",
+        location = "Pune, India",
+        knownSkills = listOf("Kotlin", "Compose"),
+        learningSkills = listOf("Rust")
+    )
+    EditProfileContent(
+        uiState = EditProfileState.Idle,
+        userProfile = dummyUser,
+        isUploading = false,
+        onBack = {},
+        onSave = { _, _, _, _, _, _ -> },
+        onUploadPhoto = {}
+    )
 }

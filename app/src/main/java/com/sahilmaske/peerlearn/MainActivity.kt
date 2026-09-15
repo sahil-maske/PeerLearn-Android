@@ -2,6 +2,7 @@ package com.sahilmaske.peerlearn
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,12 +12,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
+import com.sahilmaske.peerlearn.repository.SkillMatchRepository
 import com.sahilmaske.peerlearn.util.AppearancePreferences
 import com.sahilmaske.peerlearn.util.ThemeMode
 import com.sahilmaske.peerlearn.ui.profile.ProfileSetupScreen
@@ -46,6 +49,7 @@ import com.sahilmaske.peerlearn.navigation.NaviScreen
 import com.sahilmaske.peerlearn.ui.profile.ProfileScreen
 import com.sahilmaske.peerlearn.ui.connections.NotificationScreen
 import com.sahilmaske.peerlearn.ui.theme.PeerLearnTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,10 +64,17 @@ class MainActivity : ComponentActivity() {
             FCMService.updateCurrentToken()
         }
 
+        // TEMPORARY TEST — Gemini embedding API sahi kaam kar rahi hai ya nahi
+        // check karne ke liye. Test successful hone ke baad ye block hata dena.
+        lifecycleScope.launch {
+            val result = SkillMatchRepository().getEmbedding("Kotlin")
+            Log.d("TestEmbedding", "Result: $result")
+        }
+
         setContent {
             val prefs = remember { AppearancePreferences(this) }
             val themeMode by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
-            
+
             val useDarkTheme = when (themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true

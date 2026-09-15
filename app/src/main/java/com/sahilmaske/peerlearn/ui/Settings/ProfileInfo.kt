@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sahilmaske.peerlearn.data.model.User
 import com.sahilmaske.peerlearn.ui.theme.AppColors
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
@@ -51,12 +52,23 @@ fun ProfileInfo(
     viewModel: ProfileViewModel = viewModel(),
 ){
     val userProfile by viewModel.userProfile.collectAsState()
-    val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile(null)
     }
 
+    ProfileInfoContent(
+        userProfile = userProfile,
+        onBack = onBack
+    )
+}
+
+@Composable
+fun ProfileInfoContent(
+    userProfile: User?,
+    onBack: () -> Unit
+) {
+    val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,6 +77,7 @@ fun ProfileInfo(
             .clip(RoundedCornerShape(14.dp))
             .verticalScroll(scrollState)
     ) {
+        // ... (rest of the UI)
         // Top bar
         Box(
             modifier = Modifier
@@ -244,8 +257,17 @@ fun ProfileInfoItem(
 
 @Preview(showBackground = true)
 @Composable
-fun ProfileSkills(){
-    ProfileInfo(
+fun ProfileInfoPreview(){
+    val mockUser = User(
+        name = "Sahil Maske",
+        email = "sahil@example.com",
+        college = "Government College of Engineering",
+        knownSkills = listOf("Kotlin", "Jetpack Compose"),
+        learningSkills = listOf("Rust", "AI/ML"),
+        about = "Passionate Android Developer"
+    )
+    ProfileInfoContent(
+        userProfile = mockUser,
         onBack = {}
     )
 }

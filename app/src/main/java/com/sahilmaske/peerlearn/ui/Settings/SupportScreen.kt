@@ -30,7 +30,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.tooling.preview.Preview
 import com.sahilmaske.peerlearn.ui.theme.AppColors
+import com.sahilmaske.peerlearn.viewmodel.SupportUiState
 import com.sahilmaske.peerlearn.viewmodel.SupportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -320,13 +322,30 @@ fun ReportProblemScreen(
     onBack: () -> Unit,
     viewModel: SupportViewModel = viewModel()
 ) {
-    var description by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
+
+    ReportProblemContent(
+        uiState = uiState,
+        onBack = onBack,
+        onSubmit = { viewModel.reportProblem(it) },
+        onReset = { viewModel.resetState() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReportProblemContent(
+    uiState: SupportUiState,
+    onBack: () -> Unit,
+    onSubmit: (String) -> Unit,
+    onReset: () -> Unit
+) {
+    var description by remember { mutableStateOf("") }
 
     LaunchedEffect(uiState.submitSuccess) {
         if (uiState.submitSuccess) {
             onBack()
-            viewModel.resetState()
+            onReset()
         }
     }
 
@@ -358,10 +377,10 @@ fun ReportProblemScreen(
                 shape = RoundedCornerShape(12.dp)
             )
             if (uiState.errorMessage != null) {
-                Text(uiState.errorMessage!!, color = Color.Red, fontSize = 12.sp)
+                Text(uiState.errorMessage, color = Color.Red, fontSize = 12.sp)
             }
             Button(
-                onClick = { viewModel.reportProblem(description) },
+                onClick = { onSubmit(description) },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
@@ -383,14 +402,31 @@ fun ReportUserScreen(
     onBack: () -> Unit,
     viewModel: SupportViewModel = viewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    ReportUserContent(
+        uiState = uiState,
+        onBack = onBack,
+        onSubmit = { reportedUserId, description -> viewModel.reportUser(reportedUserId, description) },
+        onReset = { viewModel.resetState() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReportUserContent(
+    uiState: SupportUiState,
+    onBack: () -> Unit,
+    onSubmit: (String, String) -> Unit,
+    onReset: () -> Unit
+) {
     var reportedUserId by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.submitSuccess) {
         if (uiState.submitSuccess) {
             onBack()
-            viewModel.resetState()
+            onReset()
         }
     }
 
@@ -429,10 +465,10 @@ fun ReportUserScreen(
                 shape = RoundedCornerShape(12.dp)
             )
             if (uiState.errorMessage != null) {
-                Text(uiState.errorMessage!!, color = Color.Red, fontSize = 12.sp)
+                Text(uiState.errorMessage, color = Color.Red, fontSize = 12.sp)
             }
             Button(
-                onClick = { viewModel.reportUser(reportedUserId, description) },
+                onClick = { onSubmit(reportedUserId, description) },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
@@ -446,4 +482,38 @@ fun ReportUserScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SupportScreenPreview() {
+    SupportScreen(
+        onBack = {},
+        onReportProblemClick = {},
+        onReportUserClick = {},
+        onToSClick = {},
+        onPrivacyClick = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ReportProblemScreenPreview() {
+    ReportProblemContent(
+        uiState = SupportUiState(),
+        onBack = {},
+        onSubmit = {},
+        onReset = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ReportUserScreenPreview() {
+    ReportUserContent(
+        uiState = SupportUiState(),
+        onBack = {},
+        onSubmit = { _, _ -> },
+        onReset = {}
+    )
 }

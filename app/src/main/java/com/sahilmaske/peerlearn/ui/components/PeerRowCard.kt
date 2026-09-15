@@ -120,6 +120,7 @@ fun PeerRowCard(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            /*
             Box(
                 modifier = Modifier
                     .size(34.dp)
@@ -135,9 +136,10 @@ fun PeerRowCard(
                 )
             }
             Spacer(Modifier.height(10.dp))
+            */
             OutlinedButton(
                 onClick = { if (!isPending) onConnectClick(peer.uid) },
-                modifier = Modifier.height(30.dp),
+                modifier = Modifier.height(40.dp),
                 shape = RoundedCornerShape(50),
                 colors = if (isPending) {
                     ButtonDefaults.outlinedButtonColors(

@@ -24,10 +24,6 @@ class ConnectionViewModel : ViewModel() {
     private val _connectionStatus = MutableStateFlow<String?>(null) // null, pending, accepted, rejected
     val connectionStatus: StateFlow<String?> = _connectionStatus.asStateFlow()
 
-    // NEW: id of the current connections/{id} doc for the pair being watched by
-    // listenConnectionStatus, plus who originally sent the request. UI needs both
-    // to cancel a pending request or break/block an accepted one without an
-    // extra Firestore read.
     private val _activeConnectionId = MutableStateFlow<String?>(null)
     val activeConnectionId: StateFlow<String?> = _activeConnectionId.asStateFlow()
 
@@ -40,27 +36,14 @@ class ConnectionViewModel : ViewModel() {
     private val _swapRequests = MutableStateFlow<List<SwapRequest>>(emptyList())
     val swapRequests: StateFlow<List<SwapRequest>> = _swapRequests.asStateFlow()
 
-    // NEW: uid -> display name, used to show real sender name on NotificationScreen
-    // Assumes users/{uid} document has a "name" field. Change getString("name")
-    // below if your field is called something else (e.g. "fullName", "username").
     private val _senderNames = MutableStateFlow<Map<String, String>>(emptyMap())
     val senderNames: StateFlow<Map<String, String>> = _senderNames.asStateFlow()
 
-    // NEW: live connection count, calculated from the actual "connections" collection
-    // instead of a manually incremented field — so old/pre-existing accepted
-    // connections are counted correctly too, and it self-corrects if a connection
-    // is ever removed.
     private val _connectionCount = MutableStateFlow(0)
     val connectionCount: StateFlow<Int> = _connectionCount.asStateFlow()
     private var countAsUserA = 0
     private var countAsUserB = 0
 
-    // NEW: block relationship for whichever pair listenBlockStatus is currently
-    // watching.
-    //   "none"          -> neither side has blocked the other
-    //   "blockedByMe"   -> current user blocked the target
-    //   "blockedByThem" -> target blocked the current user
-    //   "mutual"        -> both directions blocked (defensive case)
     private val _blockStatus = MutableStateFlow("none")
     val blockStatus: StateFlow<String> = _blockStatus.asStateFlow()
 
@@ -73,9 +56,6 @@ class ConnectionViewModel : ViewModel() {
     private var connectionCountListenerA: ListenerRegistration? = null
     private var connectionCountListenerB: ListenerRegistration? = null
 
-    // NEW: two separate listeners because Firestore can't OR across two
-    // different document paths in one query — one watches "did I block them",
-    // the other watches "did they block me".
     private var blockedByMeListener: ListenerRegistration? = null
     private var blockedByThemListener: ListenerRegistration? = null
     private var blockedUsersListListener: ListenerRegistration? = null
@@ -84,15 +64,10 @@ class ConnectionViewModel : ViewModel() {
 
     // ---------- HELPER ----------
 
-    // Same deterministic pattern jo tune ChatViewModel me use kiya hai
     private fun buildConnectionId(userA: String, userB: String): String {
         return listOf(userA, userB).sorted().joinToString("_")
     }
 
-    // NEW: blockedUsers doc id. Unlike connections, a block is DIRECTIONAL
-    // (A blocking B is not the same relationship as B blocking A), so we can't
-    // sort the pair the way buildConnectionId does — direction has to be baked
-    // into the id itself.
     private fun buildBlockId(blockerId: String, blockedId: String): String {
         return "${blockerId}_blocks_$blockedId"
     }
@@ -130,13 +105,20 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // Accept/deny an incoming request.
-    // FIX: pehle sirf status update hota tha, koi success/failure listener nahi tha,
-    // isliye accept hone ke baad conversation/icebreaker message trigger hi nahi hota tha.
-    // requestedBy: jisne originally connection request bheji thi — icebreaker message
-    // usi user ki taraf se bheja jayega (senderId = requestedBy), taaki chat me ye
-    // uski side se (right-aligned uske liye) dikhe, "system" ki taraf se nahi.
-    fun respondToConnection(connectionId: String, accept: Boolean, userA: String, userB: String, requestedBy: String, matchedSkill: String = "") {
+    // FIX: ab onSuccess callback chatId return karta hai (accept hua to actual chatId,
+    // reject hua to null) — isi se NotificationScreen navigate kar payega chat_conversation
+    // screen pe seedha accept ke baad. Pehle koi callback hi nahi tha, isliye UI ko pata
+    // hi nahi chalta tha ki kab navigate karna hai.
+    fun respondToConnection(
+        connectionId: String,
+        accept: Boolean,
+        userA: String,
+        userB: String,
+        requestedBy: String,
+        matchedSkill: String = "",
+        onSuccess: (chatId: String?) -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
         val newStatus = if (accept) "accepted" else "rejected"
 
         db.collection("connections")
@@ -144,21 +126,30 @@ class ConnectionViewModel : ViewModel() {
             .update("status", newStatus)
             .addOnSuccessListener {
                 Log.d("ConnectionVM", "Connection $connectionId updated to $newStatus")
-                // FIX: sirf accept hone par hi conversation + icebreaker message banao
                 if (accept) {
-                    createConversationWithIcebreaker(userA, userB, requestedBy, matchedSkill)
+                    createConversationWithIcebreaker(userA, userB, requestedBy, matchedSkill) { chatId ->
+                        onSuccess(chatId)
+                    }
+                } else {
+                    onSuccess(null)
                 }
             }
             .addOnFailureListener { e ->
                 Log.e("ConnectionVM", "Failed to update connection status: $connectionId", e)
+                onFailure(e)
             }
     }
 
-    // NEW: connection accept hone ke turant baad call hota hai.
-    // - deterministic chatId banata hai (sorted uid pair — ChatViewModel wala hi pattern)
-    // - agar conversation doc pehli baar ban raha hai, to naya document banata hai
-    // - senderId (requestedBy) ki taraf se icebreaker message bhejta hai
-    private fun createConversationWithIcebreaker(userA: String, userB: String, senderId: String, skill: String) {
+    // FIX: ab onComplete(chatId) call karta hai har path pe — chahe conversation
+    // pehle se exist karta ho, chahe naya bana ho, chahe icebreaker message fail
+    // ho jaye (conversation doc to ban hi gaya, navigate karna safe hai).
+    private fun createConversationWithIcebreaker(
+        userA: String,
+        userB: String,
+        senderId: String,
+        skill: String,
+        onComplete: (chatId: String) -> Unit = {}
+    ) {
         val participants = listOf(userA, userB).sorted()
         val chatId = participants.joinToString("_")
         val convoRef = db.collection("conversations").document(chatId)
@@ -167,6 +158,7 @@ class ConnectionViewModel : ViewModel() {
             .addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     Log.d("ConnectionVM", "Conversation already exists: $chatId, skipping icebreaker")
+                    onComplete(chatId)
                     return@addOnSuccessListener
                 }
 
@@ -196,8 +188,12 @@ class ConnectionViewModel : ViewModel() {
                             "text" to icebreaker,
                             "timestamp" to System.currentTimeMillis()
                         )
-                    ).addOnFailureListener { e ->
+                    ).addOnSuccessListener {
+                        onComplete(chatId)
+                    }.addOnFailureListener { e ->
                         Log.e("ConnectionVM", "Failed to send icebreaker message: $chatId", e)
+                        // conversation doc ban chuka hai, navigate to kar sakte hain
+                        onComplete(chatId)
                     }
                 }.addOnFailureListener { e ->
                     Log.e("ConnectionVM", "Failed to create conversation: $chatId", e)
@@ -208,9 +204,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // NEW: Cancel a request YOU sent while it's still pending. Same underlying
-    // delete as breakConnection — kept as a separate, clearly-named function so
-    // the UI intent stays obvious at the call site.
     fun cancelConnectionRequest(
         connectionId: String,
         onSuccess: () -> Unit = {},
@@ -229,10 +222,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // NEW: Break an existing ACCEPTED connection. Deliberately does NOT touch
-    // the conversations/messages doc — chat history stays intact, this only
-    // removes the connection so "Connect" can be sent again later and the
-    // profile button flips back to the swap-to-connect state.
     fun breakConnection(
         connectionId: String,
         onSuccess: () -> Unit = {},
@@ -251,8 +240,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // Kept so any existing call sites don't break — prefer cancelConnectionRequest
-    // or breakConnection going forward since they make the intent explicit.
     @Deprecated(
         "Use cancelConnectionRequest or breakConnection for clearer intent",
         ReplaceWith("breakConnection(connectionId)")
@@ -263,7 +250,6 @@ class ConnectionViewModel : ViewModel() {
             .delete()
     }
 
- 
     fun blockUser(
         currentUserId: String,
         targetUserId: String,
@@ -281,8 +267,6 @@ class ConnectionViewModel : ViewModel() {
 
         db.collection("connections").document(connectionId).delete()
             .addOnCompleteListener {
-                // Proceed regardless of whether a connection doc existed to delete —
-                // blocking should still succeed even if there was never a connection.
                 db.collection("blockedUsers").document(blockId).set(blockData)
                     .addOnSuccessListener {
                         Log.d("ConnectionVM", "Blocked user: $blockId")
@@ -295,8 +279,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // NEW: Reverse of blockUser. Does not restore any connection that existed
-    // before the block — the other user would need to send a fresh request.
     fun unblockUser(
         currentUserId: String,
         targetUserId: String,
@@ -315,9 +297,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // NEW: Real-time — watches BOTH directions of the block relationship
-    // between currentUserId and targetUserId. Call this alongside
-    // listenConnectionStatus whenever ProfileScreen opens someone else's profile.
     fun listenBlockStatus(currentUserId: String, targetUserId: String) {
         blockedByMeListener?.remove()
         blockedByThemListener?.remove()
@@ -339,9 +318,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // NEW: listen to the list of users blocked by currentUserId.
-    // Fetches full User objects for each block relationship so the UI
-    // can show names/avatars in the Blocked Users list.
     fun listenBlockedUsers(currentUserId: String) {
         blockedUsersListListener?.remove()
 
@@ -356,9 +332,6 @@ class ConnectionViewModel : ViewModel() {
                     return@addSnapshotListener
                 }
 
-                // Fetch details for each blocked UID
-                // In a production app with many blocks, you might want to batch this
-                // or use a different strategy, but for a standard blocked list this is fine.
                 val users = mutableListOf<User>()
                 var fetchedCount = 0
 
@@ -393,9 +366,6 @@ class ConnectionViewModel : ViewModel() {
         }
     }
 
-    // NEW: call this for whichever uid's profile is being shown (own or someone else's).
-    // A connection can have this user as either userA or userB, so we need two
-    // listeners whose counts get summed together live.
     fun listenConnectionCount(uid: String) {
         connectionCountListenerA?.remove()
         connectionCountListenerB?.remove()
@@ -419,9 +389,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // Real-time listener: use this on ProfileScreen to show Connect/Pending/Message button
-    // UPDATED: also populates activeConnectionId + activeRequestedBy so the UI can
-    // cancel/break/block without an extra query.
     fun listenConnectionStatus(currentUserId: String, targetUserId: String) {
         connectionListener?.remove()
         val connectionId = buildConnectionId(currentUserId, targetUserId)
@@ -441,13 +408,12 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // Real-time listener: use this on NotificationScreen to show incoming pending requests
     fun listenIncomingRequests(currentUserId: String) {
         incomingListener?.remove()
 
         incomingListener = db.collection("connections")
             .whereEqualTo("status", "pending")
-            .whereEqualTo("userB", currentUserId) // requests jo currentUser ko mile hain
+            .whereEqualTo("userB", currentUserId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
 
@@ -458,8 +424,6 @@ class ConnectionViewModel : ViewModel() {
             }
     }
 
-    // NEW: fetch display names for a list of sender uids, skips ones already cached.
-    // Call this whenever incomingRequests updates (see NotificationScreen).
     fun fetchSenderNames(uids: List<String>) {
         val missing = uids.filter { it.isNotBlank() && it !in _senderNames.value.keys }
         if (missing.isEmpty()) return
@@ -507,7 +471,6 @@ class ConnectionViewModel : ViewModel() {
             .update("status", newStatus)
     }
 
-    // Real-time listener: use this on RequestsScreen (Swaps tab)
     fun listenSwapRequests(currentUserId: String) {
         swapListener?.remove()
 

@@ -64,6 +64,11 @@ import com.sahilmaske.peerlearn.viewmodel.ConnectionViewModel
 import com.sahilmaske.peerlearn.viewmodel.FeedViewModel
 import com.sahilmaske.peerlearn.viewmodel.ProfileViewModel
 
+// Ye pura screen 2 hisso mein bata hai:
+// 1) HomeScreen -> yahan se ViewModel se data liya jaata hai (Firebase wagera)
+// 2) HomeScreenContent -> sirf UI dikhata hai, koi Firebase ka kaam nahi karta
+// Isse fayda: HomeScreenContent ko Preview mein test karna easy ho jaata hai
+
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -74,6 +79,8 @@ fun HomeScreen(
     connectionViewModel: ConnectionViewModel = viewModel(),
     currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 ) {
+    // Jin logo ko connect request bheji hai unki id yahan store hoti hai
+    // Isse button "Pending" dikhata hai, dobara click nahi hone deta
     var pendingConnections by remember { mutableStateOf(setOf<String>()) }
 
     val suggestions by viewModel.suggestions.collectAsState()
@@ -100,12 +107,12 @@ fun HomeScreen(
                 currentUserId = currentUserId,
                 targetUserId = uid,
                 onSuccess = {
+                    // Request successfully gayi, ab is user ki id set mein daal do
                     pendingConnections = pendingConnections + uid
                 }
             )
         },
         onHelpClick = { postId ->
-            // NEW: opens the "Need Help" post's detail screen (comments = help offers)
             navController.navigate("help_detail/$postId")
         },
         viewModel = viewModel
@@ -127,11 +134,12 @@ fun HomeScreenContent(
     onHelpClick: (String) -> Unit = {},
     viewModel: FeedViewModel? = null
 ) {
-    // ---- Comments bottom sheet state ----
+    // Comments bottom sheet ke liye state — kaunsa post ke comments khule hain
     var activeCommentsPostId by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val comments by (viewModel?.comments?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
 
+    // Jab bhi activeCommentsPostId badalta hai, us post ke comments load karo
     LaunchedEffect(activeCommentsPostId) {
         val postId = activeCommentsPostId
         if (postId != null) {
@@ -147,7 +155,8 @@ fun HomeScreenContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ---- Top Bar ----
+
+        // ---------- TOP BAR (logo + naam, notification bell, avatar) ----------
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -179,6 +188,8 @@ fun HomeScreenContent(
                     )
                 }
                 Spacer(Modifier.width(4.dp))
+
+                // Agar profile photo nahi hai to naam ke first letters dikhao (initials)
                 if (userProfile?.avatarUrl.isNullOrEmpty()) {
                     Box(
                         modifier = Modifier
@@ -207,18 +218,21 @@ fun HomeScreenContent(
             }
         }
 
-        // ---- Scrollable content ----
+        // ---------- SCROLLABLE CONTENT (greeting + peers + feed) ----------
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // ---- Greeting ----
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
+                        .clip(shape = RoundedCornerShape(14.dp))
                 ) {
                     val firstName = userProfile?.name?.split(" ")?.firstOrNull() ?: "there"
                     Text(
@@ -236,6 +250,7 @@ fun HomeScreenContent(
                 }
             }
 
+            // ---- Recommended Peers section ----
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -257,20 +272,33 @@ fun HomeScreenContent(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(suggestions) { peer ->
-                        PeerSuggestionCard(
-                            peer = peer,
-                            onPeerClick = onPeerClick,
-                            onConnectClick = onConnectClick,
-                            isPending = peer.id in pendingConnections
-                        )
+
+                // IMPROVEMENT: agar koi suggestion hi nahi hai (naya user, ya koi match nahi),
+                // to khaali jagah dikhane ki bajaye ek chhota sa helpful message dikhao
+                if (suggestions.isEmpty()) {
+                    Text(
+                        text = "Add skills to your profile to see peer suggestions",
+                        fontSize = 13.sp,
+                        color = Color(0xFF9E9E9E),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                } else {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(suggestions) { peer ->
+                            PeerSuggestionCard(
+                                peer = peer,
+                                onPeerClick = onPeerClick,
+                                onConnectClick = onConnectClick,
+                                isPending = peer.id in pendingConnections
+                            )
+                        }
                     }
                 }
             }
 
+            // ---- Community Feed heading ----
             item {
                 Text(
                     text = "Community Feed",
@@ -280,6 +308,7 @@ fun HomeScreenContent(
                 )
             }
 
+            // ---- Posts list ----
             items(posts) { post ->
                 PostCard(
                     post = post,
@@ -297,7 +326,7 @@ fun HomeScreenContent(
         }
     }
 
-    // ---- Comments Bottom Sheet ----
+    // ---------- Comments bottom sheet ----------
     if (activeCommentsPostId != null) {
         CommentsBottomSheet(
             comments = comments,
@@ -319,7 +348,7 @@ fun HomeScreenContent(
     }
 }
 
-// ==================== POST CARD (X/Twitter style) ====================
+// ==================== POST CARD (X/Twitter jaisa dikhta hai) ====================
 @Composable
 fun PostCard(
     post: Post,
@@ -340,11 +369,13 @@ fun PostCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
             .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            // ---- Avatar ----
+
+            // ---- Author avatar ----
             if (post.authorAvatarUrl.isNotEmpty()) {
                 AsyncImage(
                     model = post.authorAvatarUrl,
@@ -368,7 +399,8 @@ fun PostCard(
             Spacer(Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // ---- Name + time + badge row ----
+
+                // ---- Naam, time, aur badge (Query / Need Help / Teaching / Learning) ----
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(post.authorName, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppColors.TextPrimary)
                     Spacer(Modifier.width(6.dp))
@@ -386,7 +418,6 @@ fun PostCard(
                                 Text("Query", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color(0xFF3C3489))
                             }
                         }
-                        // NEW: distinct "Need Help" badge, separate from Teaching/Learning
                         needsHelp -> {
                             Spacer(Modifier.weight(1f))
                             Box(
@@ -451,7 +482,7 @@ fun PostCard(
 
                 Spacer(Modifier.height(10.dp))
 
-                // NEW: prominent "Offer Help" button, only for help-intent posts
+                // "Need Help" waale post par bada Offer Help button dikhta hai
                 if (needsHelp) {
                     Row(
                         modifier = Modifier
@@ -475,7 +506,7 @@ fun PostCard(
                     Spacer(Modifier.height(10.dp))
                 }
 
-                // ---- Engagement row: comment, like, share ----
+                // ---- Comment / Like / Share row ----
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(28.dp),
                     verticalAlignment = Alignment.CenterVertically

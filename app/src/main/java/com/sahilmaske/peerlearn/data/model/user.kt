@@ -8,8 +8,10 @@ data class User(
     val college : String = "",
     val role : String = "",
     val tagline : String = "",
-    val knownSkills : List<String> = emptyList(),
-    val learningSkills : List<String> = emptyList(),
+    val knownSkills: List<String> = emptyList(),
+    val learningSkills: List<String> = emptyList(),
+    val knownSkillsEmbedding: List<Float> = emptyList(),
+    val learningSkillsEmbedding: List<Float> = emptyList(),
     val about : String = "",
     val avatarUrl : String = "",
     val location : String = "",
@@ -25,7 +27,8 @@ data class User(
     val lastSeen: Long = 0L,        // ya Timestamp, jo bhi convention already use ho raha hai tumhare model mein
     val hideOnlineStatus: Boolean = false,
     val showPhoneNumber: Boolean = false,
-    val profileVisibility: String = "Everyone"
+    val profileVisibility: String = "Everyone",
+    val skillEmbedding: List<Float> = emptyList()
 //    val instagramURL : String ="",
 //    val linkedInURL : String ="",
 //    val gitHubURL : String ="",

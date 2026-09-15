@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -193,4 +195,35 @@ private fun CommentRow(comment: Comment) {
             Text(comment.text, fontSize = 13.sp, color = AppColors.TextPrimary)
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
+@Composable
+fun CommentsBottomSheetPreview() {
+    val sheetState = rememberModalBottomSheetState()
+    val mockComments = listOf(
+        Comment(
+            id = "1",
+            authorId = "101",
+            authorName = "Sahil Maske",
+            authorAvatarUrl = "",
+            text = "This is a great post!",
+            timestamp = System.currentTimeMillis()
+        ),
+        Comment(
+            id = "2",
+            authorId = "102",
+            authorName = "John Doe",
+            authorAvatarUrl = "",
+            text = "Thanks for sharing!",
+            timestamp = System.currentTimeMillis() - 60000
+        )
+    )
+    CommentsBottomSheet(
+        comments = mockComments,
+        sheetState = sheetState,
+        onDismiss = {},
+        onSendComment = {}
+    )
 }

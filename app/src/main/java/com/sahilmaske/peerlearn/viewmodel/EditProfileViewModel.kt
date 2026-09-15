@@ -7,13 +7,24 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.sahilmaske.peerlearn.data.model.User
+import com.sahilmaske.peerlearn.repository.SkillMatchRepository
 import com.sahilmaske.peerlearn.util.ImageUploadUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class EditProfileViewModel : ViewModel() {
+sealed class EditProfileState {
+    object Idle : EditProfileState()
+    object Loading : EditProfileState()
+    object Saving : EditProfileState()
+    object SuccessSave : EditProfileState()
+    data class Error(val message: String) : EditProfileState()
+}
+
+class EditProfileViewModel(
+    private val repository: SkillMatchRepository = SkillMatchRepository()
+) : ViewModel() {
 
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val db by lazy { FirebaseFirestore.getInstance() }
@@ -34,26 +45,12 @@ class EditProfileViewModel : ViewModel() {
             try {
                 val doc = db.collection("users").document(uid).get().await()
                 if (doc.exists()) {
-                    val user = doc.toObject(User::class.java)
-                    _userProfile.value = user
-                    _uiState.value = EditProfileState.SuccessLoad
-                } else {
-                    _uiState.value = EditProfileState.Error("Profile not found")
+                    _userProfile.value = doc.toObject(User::class.java)
                 }
+                _uiState.value = EditProfileState.Idle
             } catch (e: Exception) {
                 _uiState.value = EditProfileState.Error(e.message ?: "Failed to load profile")
             }
-        }
-    }
-
-    fun uploadPhoto(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            _isUploading.value = true
-            val url = ImageUploadUtils.uploadToCloudinary(context, uri)
-            if (url.isNotEmpty()) {
-                _userProfile.value = _userProfile.value?.copy(avatarUrl = url)
-            }
-            _isUploading.value = false
         }
     }
 
@@ -65,27 +62,48 @@ class EditProfileViewModel : ViewModel() {
         knownSkills: List<String>,
         learningSkills: List<String>
     ) {
-        if (name.isBlank()) {
-            _uiState.value = EditProfileState.Error("Name cannot be empty")
-            return
-        }
-
         val uid = auth.currentUser?.uid ?: return
-        val currentProfile = _userProfile.value ?: return
-
-        val updatedUser = currentProfile.copy(
-            name = name,
-            tagline = tagline,
-            location = location,
-            about = about,
-            knownSkills = knownSkills,
-            learningSkills = learningSkills
-        )
-
         viewModelScope.launch {
             _uiState.value = EditProfileState.Saving
             try {
-                db.collection("users").document(uid).set(updatedUser).await()
+                val currentUser = _userProfile.value
+                
+                // Embedding update logic
+                var newKnownEmbedding = currentUser?.knownSkillsEmbedding ?: emptyList()
+                var newLearningEmbedding = currentUser?.learningSkillsEmbedding ?: emptyList()
+
+                if (currentUser?.knownSkills != knownSkills && knownSkills.isNotEmpty()) {
+                    newKnownEmbedding = repository.getEmbedding(knownSkills.joinToString(", ")) ?: newKnownEmbedding
+                }
+                if (currentUser?.learningSkills != learningSkills && learningSkills.isNotEmpty()) {
+                    newLearningEmbedding = repository.getEmbedding(learningSkills.joinToString(", ")) ?: newLearningEmbedding
+                }
+
+                val updates = mutableMapOf<String, Any>(
+                    "name" to name,
+                    "tagline" to tagline,
+                    "location" to location,
+                    "about" to about,
+                    "knownSkills" to knownSkills,
+                    "learningSkills" to learningSkills,
+                    "knownSkillsEmbedding" to newKnownEmbedding,
+                    "learningSkillsEmbedding" to newLearningEmbedding
+                )
+
+                db.collection("users").document(uid).update(updates).await()
+                
+                // Update local state
+                _userProfile.value = currentUser?.copy(
+                    name = name,
+                    tagline = tagline,
+                    location = location,
+                    about = about,
+                    knownSkills = knownSkills,
+                    learningSkills = learningSkills,
+                    knownSkillsEmbedding = newKnownEmbedding,
+                    learningSkillsEmbedding = newLearningEmbedding
+                )
+                
                 _uiState.value = EditProfileState.SuccessSave
             } catch (e: Exception) {
                 _uiState.value = EditProfileState.Error(e.message ?: "Failed to save profile")
@@ -93,16 +111,28 @@ class EditProfileViewModel : ViewModel() {
         }
     }
 
+    fun uploadPhoto(context: Context, uri: Uri) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _isUploading.value = true
+            try {
+                val imageUrl = ImageUploadUtils.uploadToCloudinary(context, uri)
+                if (imageUrl.isNotEmpty()) {
+                    db.collection("users").document(uid)
+                        .update("avatarUrl", imageUrl)
+                        .await()
+                    
+                    _userProfile.value = _userProfile.value?.copy(avatarUrl = imageUrl)
+                }
+            } catch (e: Exception) {
+                // Optionally handle error
+            } finally {
+                _isUploading.value = false
+            }
+        }
+    }
+
     fun resetState() {
         _uiState.value = EditProfileState.Idle
     }
-}
-
-sealed class EditProfileState {
-    object Idle : EditProfileState()
-    object Loading : EditProfileState()
-    object SuccessLoad : EditProfileState()
-    object Saving : EditProfileState()
-    object SuccessSave : EditProfileState()
-    data class Error(val message: String) : EditProfileState()
 }

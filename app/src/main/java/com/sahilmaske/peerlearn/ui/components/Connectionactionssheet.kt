@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sahilmaske.peerlearn.ui.theme.AppColors
@@ -194,4 +195,14 @@ private fun ActionRow(
         Spacer(Modifier.width(14.dp))
         Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = color)
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ConnectionActionsSheetPreview() {
+    ConnectionActionsSheet(
+        show = true,
+        mode = ConnectionActionMode.ACCEPTED,
+        onDismiss = {}
+    )
 }

@@ -2,10 +2,10 @@ package com.sahilmaske.peerlearn.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.sahilmaske.peerlearn.data.model.Conversation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,9 +55,12 @@ class ChatViewModel : ViewModel() {
         convoListener?.remove()
         convoListener = db.collection("conversations")
             .whereArrayContains("participants", uid)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+                if (error != null) {
+                    Log.e("ChatViewModel", "Conversations listener failed", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
 
                 val docs = snapshot.documents
 
@@ -102,7 +105,8 @@ class ChatViewModel : ViewModel() {
                                     time = formatTime(timestamp),
                                     isOnline = isOnline,
                                     unreadCount = unreadCount,
-                                    hasUnread = unreadCount > 0
+                                    hasUnread = unreadCount > 0,
+                                    timestampMillis = timestamp
                                 )
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -111,10 +115,11 @@ class ChatViewModel : ViewModel() {
                         }
                     }.mapNotNull { it.await() }
 
-                    _conversations.value = resolvedList
-                    _totalUnreadCount.value = resolvedList.sumOf { it.unreadCount }
+                    val sortedList = resolvedList.sortedByDescending { it.timestampMillis }
+                    _conversations.value = sortedList
+                    _totalUnreadCount.value = sortedList.sumOf { it.unreadCount }
 
-                    resolvedList.forEach { convo ->
+                    sortedList.forEach { convo ->
                         attachPresenceListener(convo.otherUid)
                     }
                 }

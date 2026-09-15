@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -110,4 +111,13 @@ fun ZoomableImageDialog(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ZoomableImageDialogPreview() {
+    ZoomableImageDialog(
+        imageUrl = "https://example.com/image.jpg",
+        onDismiss = {}
+    )
 }
