@@ -8,53 +8,87 @@ import com.sahilmaske.peerlearn.API.RetrofitClient
 import com.sahilmaske.peerlearn.BuildConfig
 import com.sahilmaske.peerlearn.data.model.SkillMatchModel
 import com.sahilmaske.peerlearn.data.model.User
+import com.sahilmaske.peerlearn.util.SkillAliasMapper
 import kotlinx.coroutines.tasks.await
 
 class SkillMatchRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
-    // Step 1: Saare users Firestore se fetch kar (current user ko chhodke)
+    // Step 1: Fetch users from Firestore (current user excluded)
+    // FIX (perf): limit the fetch instead of pulling the entire collection.
+    // TODO: replace with a proper Firestore query — e.g.
+    //   .whereArrayContainsAny("knownSkills", currentUser.learningSkills)
+    // once skill strings are normalized at write-time, so Firestore itself
+    // narrows the candidate set instead of Kotlin filtering everyone.
     suspend fun getRuleBasedMatches(currentUser: User): List<SkillMatchModel> {
         val snapshot = firestore.collection("users")
+            .limit(200)
             .get()
             .await()
 
         val allUsers = snapshot.toObjects(User::class.java)
 
-        // Step 2: Current user ko list se nikaal de (khud se match nahi karna)
+        // Step 2: Remove current user from the list (don't match with self)
         val otherUsers = allUsers.filter { it.uid != currentUser.uid }
 
-        // Step 3: Har user ke liye match score calculate kar
+        // FIX (perf): normalize the current user's skills ONCE, outside the loop,
+        // instead of re-normalizing them for every other user compared.
+        val currentWantsNormalized = SkillAliasMapper
+            .normalizeList(currentUser.learningSkills)
+            .map { it.lowercase() }
+
+        val currentHasEmbedding = currentUser.learningSkillsEmbedding.isNotEmpty()
+
+        // Step 3: Calculate match score for each user
         val matches = otherUsers.mapNotNull { otherUser ->
-            calculateMatch(currentUser, otherUser)
+            calculateMatch(currentUser, otherUser, currentWantsNormalized, currentHasEmbedding)
         }
 
-        // Step 4: Best match sabse upar dikhe, isliye score se sort kar
+        // Step 4: Sort so best match shows first
         return matches.sortedByDescending { it.matchScore }
     }
 
-    // UPDATED: Ab ye function exact keyword match (rule-based) aur
-    // semantic similarity (AI embeddings) dono ko combine karta hai
-    private fun calculateMatch(currentUser: User, otherUser: User): SkillMatchModel? {
-        val currentWants = currentUser.learningSkills.map { it.lowercase() }
-        val otherKnows = otherUser.knownSkills.map { it.lowercase() }
-        val overlap = currentWants.intersect(otherKnows.toSet())
+    // Combines exact keyword match (rule-based) with semantic similarity (AI embeddings)
+    private fun calculateMatch(
+        currentUser: User,
+        otherUser: User,
+        currentWantsNormalized: List<String>,
+        currentHasEmbedding: Boolean
+    ): SkillMatchModel? {
+        val otherKnowsNormalized = SkillAliasMapper
+            .normalizeList(otherUser.knownSkills)
+            .map { it.lowercase() }
 
-        val ruleScore = if (currentWants.isEmpty()) 0f
-        else overlap.size.toFloat() / currentWants.size.toFloat()
+        val overlap = currentWantsNormalized.intersect(otherKnowsNormalized.toSet())
 
-        // FIX: current user ki "learningSkills" embedding VS
-        // other user ki "knownSkills" embedding compare kar rahe hain —
-        // ye specific aur accurate hai, poore profile ki jagah
-        val semanticScore = cosineSimilarity(
-            currentUser.learningSkillsEmbedding,
-            otherUser.knownSkillsEmbedding
-        )
+        val ruleScore = if (currentWantsNormalized.isEmpty()) 0f
+        else overlap.size.toFloat() / currentWantsNormalized.size.toFloat()
 
-        val finalScore = maxOf(ruleScore, semanticScore * 0.9f)
+        // FIX (correctness): only trust semanticScore if BOTH users actually have
+        // embeddings generated. Otherwise cosineSimilarity silently returns 0f,
+        // which would wrongly kill a valid rule-based match below.
+        val otherHasEmbedding = otherUser.knownSkillsEmbedding.isNotEmpty()
+        val bothHaveEmbeddings = currentHasEmbedding && otherHasEmbedding
 
-        if (ruleScore == 0f && semanticScore < 0.75f) return null
+        val semanticScore = if (bothHaveEmbeddings) {
+            cosineSimilarity(currentUser.learningSkillsEmbedding, otherUser.knownSkillsEmbedding)
+        } else {
+            null // signals "unknown", not "zero similarity"
+        }
+
+        val finalScore = if (semanticScore != null) {
+            maxOf(ruleScore, semanticScore * 0.9f)
+        } else {
+            ruleScore
+        }
+
+        // FIX (correctness): the semantic threshold only applies when we actually
+        // have a semantic score to judge. If embeddings aren't ready yet, fall back
+        // to rule-based matching alone instead of discarding the match.
+        val failsSemanticThreshold = semanticScore != null && semanticScore < 0.75f
+        if (ruleScore == 0f && failsSemanticThreshold) return null
+        if (ruleScore == 0f && semanticScore == null) return null
 
         val reason = if (overlap.isNotEmpty()) {
             "Can teach you: ${overlap.joinToString(", ")}"
@@ -70,8 +104,7 @@ class SkillMatchRepository(
         )
     }
 
-    // NAYA: Do embedding vectors kitne "similar" hain, ye nikalta hai (0 se 1 ke beech)
-    // 1 ka matlab bilkul same/related, 0 ka matlab bilkul unrelated
+    // Cosine similarity between two embedding vectors (0 = unrelated, 1 = identical/related)
     private fun cosineSimilarity(vec1: List<Float>, vec2: List<Float>): Float {
         if (vec1.isEmpty() || vec2.isEmpty() || vec1.size != vec2.size) return 0f
 
@@ -89,10 +122,8 @@ class SkillMatchRepository(
         return if (denominator == 0f) 0f else dotProduct / denominator
     }
 
-    // ---------------------------------------------------------
-    // AI/Embeddings ke liye — ek text (jaise "Kotlin, Firebase")
-    // leke uska embedding vector nikalta hai Gemini API se
-    // ---------------------------------------------------------
+    // Fetches an embedding vector for a given text (e.g. "Kotlin, Firebase") via Gemini API
+    // TODO: replace Log.e with a proper crash-reporting/monitoring call for production
     suspend fun getEmbedding(text: String): List<Float>? {
         return try {
             val request = EmbeddingRequest(

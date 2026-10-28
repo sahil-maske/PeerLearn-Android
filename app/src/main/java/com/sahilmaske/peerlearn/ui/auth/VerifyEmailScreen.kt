@@ -51,6 +51,7 @@ fun VerifyEmailScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
 
+
     fun sendVerificationEmail() {
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) {
